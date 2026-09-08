@@ -10,21 +10,15 @@ chrome.runtime.onInstalled.addListener(() => {
 
 async function extractSelection(tabId) {
   try {
+    await chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      files: ['lib/Readability.js', 'content_source.js']
+    });
     const res = await chrome.tabs.sendMessage(tabId, { action: 'getSelection' });
     return res?.text;
-  } catch (e) {
-    // Inject if not injected
-    try {
-      await chrome.scripting.executeScript({
-        target: { tabId: tabId },
-        files: ['lib/Readability.js', 'content_source.js']
-      });
-      const res = await chrome.tabs.sendMessage(tabId, { action: 'getSelection' });
-      return res?.text;
-    } catch (err) {
-      console.error("Failed to extract selection", err);
-      return null;
-    }
+  } catch (err) {
+    console.error("Failed to extract selection", err);
+    return null;
   }
 }
 

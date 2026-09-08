@@ -208,37 +208,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (!tab) return;
       
+      // Inject scripts first (guarded inside content_source.js to prevent double listeners)
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['lib/Readability.js', 'content_source.js']
+      });
+      
       const response = await chrome.tabs.sendMessage(tab.id, { action: method });
       if (response && response.text) {
         state.textQueue.push(response.text);
         await saveState();
-      } else {
-        // Fallback injection if not already loaded
-        await chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          files: ['lib/Readability.js', 'content_source.js']
-        });
-        const retryResponse = await chrome.tabs.sendMessage(tab.id, { action: method });
-        if (retryResponse && retryResponse.text) {
-          state.textQueue.push(retryResponse.text);
-          await saveState();
-        }
       }
     } catch (e) {
       console.error("Injection failed", e);
-      // Ensure we inject if sending fails
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (tab) {
-         await chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          files: ['lib/Readability.js', 'content_source.js']
-        });
-        const retryResponse = await chrome.tabs.sendMessage(tab.id, { action: method }).catch(()=>({}));
-        if (retryResponse && retryResponse.text) {
-          state.textQueue.push(retryResponse.text);
-          await saveState();
-        }
-      }
     }
   };
 
