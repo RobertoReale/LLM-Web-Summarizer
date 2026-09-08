@@ -7,30 +7,91 @@
     "message": "Summarize web pages or selected text using your favorite LLM.",
     "description": "Description of the extension"
   },
-  "title": { "message": "LLM Summarizer" },
-  "textManagement": { "message": "1. Text Management" },
-  "capturePage": { "message": "Capture Full Page" },
-  "captureSelection": { "message": "Capture Selection" },
-  "queueStatus": { "message": "Items in queue: " },
-  "clearQueue": { "message": "Clear Queue" },
-  "viewQueue": { "message": "View Queue" },
-  "hideQueue": { "message": "Hide Queue" },
-  "charCount": { "message": "Characters" },
-  "tokenCount": { "message": "Tokens" },
-  "lengthWarning": { "message": "Warning: Very long texts might be truncated or cause instability in Web Mode." },
-  "configTitle": { "message": "2. Configuration" },
-  "promptType": { "message": "Prompt Type" },
-  "promptShort": { "message": "Short Summary" },
-  "promptDetailed": { "message": "Detailed Summary" },
-  "promptChild": { "message": "Explain like I'm 5" },
-  "promptCustom": { "message": "Custom..." },
-  "customPromptLabel": { "message": "Custom Prompt" },
-  "customPromptPlaceholder": { "message": "Write your prompt here..." },
-  "targetLlm": { "message": "Target LLM" },
-  "submitBtn": { "message": "Send to LLM" },
-  "submitBtnLoading": { "message": "Opening Web Mode..." },
-  "apiOutputTitle": { "message": "API Output" },
-  "copyAll": { "message": "Copy All" },
-  "queueEmpty": { "message": "Queue is empty. Capture text before sending." },
-  "contextMenuAdd": { "message": "Add to Summary (LLM)" }
+  "title": {
+    "message": "LLM Summarizer"
+  },
+  "textManagement": {
+    "message": "1. Text Management"
+  },
+  "capturePage": {
+    "message": "Capture Full Page"
+  },
+  "captureSelection": {
+    "message": "Capture Selection"
+  },
+  "queueStatus": {
+    "message": "Items in queue: "
+  },
+  "clearQueue": {
+    "message": "Clear Queue"
+  },
+  "viewQueue": {
+    "message": "View Queue"
+  },
+  "hideQueue": {
+    "message": "Hide Queue"
+  },
+  "charCount": {
+    "message": "Characters"
+  },
+  "tokenCount": {
+    "message": "Tokens"
+  },
+  "lengthWarning": {
+    "message": "Warning: Very long texts might be truncated or cause instability in Web Mode."
+  },
+  "configTitle": {
+    "message": "2. Configuration"
+  },
+  "promptType": {
+    "message": "Prompt Type"
+  },
+  "promptShort": {
+    "message": "Short Summary"
+  },
+  "promptDetailed": {
+    "message": "Detailed Summary"
+  },
+  "promptChild": {
+    "message": "Explain like I'm 5"
+  },
+  "promptCustom": {
+    "message": "Custom..."
+  },
+  "customPromptLabel": {
+    "message": "Custom Prompt"
+  },
+  "customPromptPlaceholder": {
+    "message": "Write your prompt here..."
+  },
+  "targetLlm": {
+    "message": "Target LLM"
+  },
+  "submitBtn": {
+    "message": "Send to LLM"
+  },
+  "submitBtnLoading": {
+    "message": "Opening Web Mode..."
+  },
+  "apiOutputTitle": {
+    "message": "API Output"
+  },
+  "copyAll": {
+    "message": "Copy All"
+  },
+  "queueEmpty": {
+    "message": "Queue is empty. Capture text before sending."
+  },
+  "contextMenuAdd": {
+    "message": "Add to Summary (LLM)"
+  },
+  "toastCapturedSelection": {
+    "message": "Captured selection:"
+  },
+  "toastCapturedPage": {
+    "message": "Captured page:"
+  },
+  "textLabel": {
+    "message": "Text:"
+  }
 }

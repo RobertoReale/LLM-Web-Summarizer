@@ -1,0 +1,97 @@
+{
+  "extensionName": {
+    "message": "LLM Web-Summarizer",
+    "description": "Name of the extension"
+  },
+  "extensionDesc": {
+    "message": "Fassen Sie Webseiten oder ausgewählten Text mit Ihrem Lieblings-LLM zusammen.",
+    "description": "Description of the extension"
+  },
+  "title": {
+    "message": "LLM Summarizer"
+  },
+  "textManagement": {
+    "message": "1. Textverwaltung"
+  },
+  "capturePage": {
+    "message": "Ganze Seite erfassen"
+  },
+  "captureSelection": {
+    "message": "Auswahl erfassen"
+  },
+  "queueStatus": {
+    "message": "Elemente in der Warteschlange: "
+  },
+  "clearQueue": {
+    "message": "Warteschlange leeren"
+  },
+  "viewQueue": {
+    "message": "Warteschlange anzeigen"
+  },
+  "hideQueue": {
+    "message": "Warteschlange ausblenden"
+  },
+  "charCount": {
+    "message": "Zeichen"
+  },
+  "tokenCount": {
+    "message": "Tokens"
+  },
+  "lengthWarning": {
+    "message": "Warnung: Sehr lange Texte können abgeschnitten werden oder Instabilität verursachen."
+  },
+  "configTitle": {
+    "message": "2. Konfiguration"
+  },
+  "promptType": {
+    "message": "Prompt-Typ"
+  },
+  "promptShort": {
+    "message": "Kurze Zusammenfassung"
+  },
+  "promptDetailed": {
+    "message": "Detaillierte Zusammenfassung"
+  },
+  "promptChild": {
+    "message": "Erkläre es wie einem Kind"
+  },
+  "promptCustom": {
+    "message": "Benutzerdefiniert..."
+  },
+  "customPromptLabel": {
+    "message": "Benutzerdefinierter Prompt"
+  },
+  "customPromptPlaceholder": {
+    "message": "Schreiben Sie hier Ihren Prompt..."
+  },
+  "targetLlm": {
+    "message": "Ziel-LLM"
+  },
+  "submitBtn": {
+    "message": "An LLM senden"
+  },
+  "submitBtnLoading": {
+    "message": "Web-Modus wird geöffnet..."
+  },
+  "apiOutputTitle": {
+    "message": "API-Ausgabe"
+  },
+  "copyAll": {
+    "message": "Alles kopieren"
+  },
+  "queueEmpty": {
+    "message": "Die Warteschlange ist leer. Erfassen Sie zuerst Text."
+  },
+  "contextMenuAdd": {
+    "message": "Zur Zusammenfassung hinzufügen (LLM)"
+  },
+  "toastCapturedSelection": {
+    "message": "Auswahl erfasst:"
+  },
+  "toastCapturedPage": {
+    "message": "Seite erfasst:"
+  },
+  "textLabel": {
+    "message": "Text:"
+  }
+}

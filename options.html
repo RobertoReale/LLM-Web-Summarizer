@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Opzioni - LLM Web-Summarizer</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="options-container">
+    <header>
+      <h1>Configurazione LLM Web-Summarizer</h1>
+    </header>
+    
+    <main>
+      <section class="card">
+        <h2>Chiavi API (API Mode)</h2>
+        <p class="description">Inserisci le chiavi API per utilizzare la modalità API diretta (senza aprire nuove tab).</p>
+        
+        <div class="form-group">
+          <label for="openai-key">OpenAI API Key (ChatGPT)</label>
+          <input type="password" id="openai-key" placeholder="sk-...">
+        </div>
+        
+        <div class="form-group">
+          <label for="anthropic-key">Anthropic API Key (Claude)</label>
+          <input type="password" id="anthropic-key" placeholder="sk-ant-...">
+        </div>
+        
+        <div class="form-group">
+          <label for="gemini-key">Google Gemini API Key</label>
+          <input type="password" id="gemini-key" placeholder="AIza...">
+        </div>
+      </section>
+      
+      <section class="card">
+        <h2>Selettori CSS Avanzati (Web Mode)</h2>
+        <p class="description">Se i siti degli LLM aggiornano la loro interfaccia e l'estensione non riesce più ad incollare il testo, puoi aggiornare qui i selettori CSS della casella di input.</p>
+        
+        <div class="form-group">
+          <label for="chatgpt-selectors">ChatGPT Selectors (separati da virgola)</label>
+          <input type="text" id="chatgpt-selectors">
+        </div>
+        
+        <div class="form-group">
+          <label for="claude-selectors">Claude Selectors</label>
+          <input type="text" id="claude-selectors">
+        </div>
+        
+        <div class="form-group">
+          <label for="gemini-selectors">Gemini Selectors</label>
+          <input type="text" id="gemini-selectors">
+        </div>
+        
+        <div class="form-group">
+          <label for="perplexity-selectors">Perplexity Selectors</label>
+          <input type="text" id="perplexity-selectors">
+        </div>
+      </section>
+      
+      <div class="actions">
+        <span id="status-msg" class="status hidden">Salvato con successo!</span>
+        <button id="save-btn" class="btn primary">Salva Impostazioni</button>
+      </div>
+    </main>
+  </div>
+  <script src="options.js"></script>
+</body>
+</html>

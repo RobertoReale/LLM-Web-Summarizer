@@ -12,8 +12,10 @@ async function injectPayload() {
 
   const { text, target } = pendingInjection;
 
+  const { customSelectors } = await chrome.storage.local.get('customSelectors');
+  
   // Configuration per target
-  const configs = {
+  const defaultConfigs = {
     chatgpt: {
       inputs: ['#prompt-textarea', '[contenteditable="true"][data-testid]', '.ProseMirror', 'textarea'],
     },
@@ -28,7 +30,8 @@ async function injectPayload() {
     }
   };
 
-  const cfg = configs[target] || configs.chatgpt;
+  const configs = customSelectors || defaultConfigs;
+  const cfg = configs[target] || defaultConfigs.chatgpt;
   
   // Wait for input to be ready
   const input = await waitForInput(cfg.inputs, 15000);

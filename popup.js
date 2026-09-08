@@ -47,11 +47,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   // --- State ---
   let state = {
     textQueue: [],
-    selectedPrompt: 'Riassumi Brevemente',
+    selectedPrompt: 'promptShort',
     customPromptText: '',
     targetLLM: 'chatgpt',
     executionMode: 'web',
-    isDarkMode: true
+    isDarkMode: false
   };
 
   try {
@@ -64,8 +64,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (res.isDarkMode !== undefined) {
       state.isDarkMode = res.isDarkMode;
     } else {
-      // Check system preference
-      state.isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      // Default to white theme as requested
+      state.isDarkMode = false;
     }
   } catch (e) {
     console.error("Failed to load state", e);
@@ -148,6 +148,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateUI();
   };
 
+  const debounce = (func, wait) => {
+    let timeout;
+    return (...args) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func(...args), wait);
+    };
+  };
+
+  const debouncedSaveState = debounce(saveState, 500);
+
   // Listen to storage changes from background.js (e.g., Context Menus)
   chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'local' && changes.textQueue) {
@@ -164,7 +174,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   customPrompt.addEventListener('input', (e) => {
     state.customPromptText = e.target.value;
-    saveState();
+    debouncedSaveState();
   });
 
   targetLlm.addEventListener('change', (e) => {
@@ -194,7 +204,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   queueEditor.addEventListener('input', (e) => {
     // If the user edits manually, we flatten the queue to a single item
     state.textQueue = e.target.value.trim() ? [e.target.value] : [];
-    saveState();
+    debouncedSaveState();
   });
 
   clearQueueBtn.addEventListener('click', () => {
@@ -208,11 +218,27 @@ document.addEventListener('DOMContentLoaded', async () => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (!tab) return;
       
-      // Inject scripts first (guarded inside content_source.js to prevent double listeners)
-      await chrome.scripting.executeScript({
+      const check = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        files: ['lib/Readability.js', 'content_source.js']
+        func: () => ({
+          hasReadability: typeof Readability !== 'undefined',
+          hasTurndown: typeof TurndownService !== 'undefined',
+          hasContentSource: typeof window.__llm_summarizer_injected !== 'undefined'
+        })
       });
+      
+      const status = check[0]?.result || {};
+      const filesToInject = [];
+      if (!status.hasReadability) filesToInject.push('lib/Readability.js');
+      if (!status.hasTurndown) filesToInject.push('lib/turndown.js');
+      if (!status.hasContentSource) filesToInject.push('content_source.js');
+
+      if (filesToInject.length > 0) {
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: filesToInject
+        });
+      }
       
       const response = await chrome.tabs.sendMessage(tab.id, { action: method });
       if (response && response.text) {
@@ -235,13 +261,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const fullText = state.textQueue.join('\n\n---\n\n');
-    let promptValue = state.selectedPrompt === 'custom' ? state.customPromptText : state.selectedPrompt;
+    let promptValue = state.selectedPrompt === 'custom' 
+      ? state.customPromptText 
+      : chrome.i18n.getMessage(state.selectedPrompt) || state.selectedPrompt;
     
-    // We should translate the standard prompts if possible, but actually we pass them verbatim to the LLM. 
-    // Wait, the standard prompts like "Riassumi Brevemente" are passed to LLM. Better pass the Italian string or let the user decide.
-    // For now we pass the literal value.
-    
-    const finalPayload = `${promptValue}\n\nTesto:\n${fullText}`;
+    const textLabel = chrome.i18n.getMessage('textLabel') || "Testo:";
+    const finalPayload = `${promptValue}\n\n${textLabel}\n${fullText}`;
 
     if (state.executionMode === 'web') {
       submitBtn.textContent = chrome.i18n.getMessage('submitBtnLoading') || 'Apertura Web Mode...';
@@ -249,12 +274,77 @@ document.addEventListener('DOMContentLoaded', async () => {
       chrome.runtime.sendMessage({ action: 'triggerWebMode', payload: finalPayload, target: state.targetLLM });
       setTimeout(() => window.close(), 1000);
     } else {
-      // API Mode Placeholder
+      // API Mode 
       apiOutputContainer.classList.remove('hidden');
-      if (typeof marked !== 'undefined') {
-        apiOutput.innerHTML = marked.parse("*L'integrazione API diretta non è configurata in questa demo.*\n\n**Payload preparato di " + finalPayload.length + " caratteri.**");
-      } else {
-        apiOutput.innerHTML = "<em>L'integrazione API diretta non è configurata in questa demo.</em><br>Payload preparato di " + finalPayload.length + " caratteri.";
+      apiOutput.innerHTML = "<em>Elaborazione in corso...</em>";
+      submitBtn.disabled = true;
+
+      try {
+        const data = await chrome.storage.local.get('apiKeys');
+        const apiKeys = data.apiKeys || {};
+        
+        let responseText = "";
+
+        if (state.targetLLM === 'chatgpt') {
+          if (!apiKeys.openai) throw new Error("API Key OpenAI mancante. Configurala nelle Opzioni.");
+          const res = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKeys.openai}`
+            },
+            body: JSON.stringify({
+              model: 'gpt-3.5-turbo',
+              messages: [{ role: 'user', content: finalPayload }]
+            })
+          });
+          const json = await res.json();
+          if (json.error) throw new Error(json.error.message);
+          responseText = json.choices[0].message.content;
+        } else if (state.targetLLM === 'claude') {
+          if (!apiKeys.anthropic) throw new Error("API Key Anthropic mancante. Configurala nelle Opzioni.");
+          const res = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': apiKeys.anthropic,
+              'anthropic-version': '2023-06-01',
+              'anthropic-dangerously-allow-browser': 'true'
+            },
+            body: JSON.stringify({
+              model: 'claude-3-haiku-20240307',
+              max_tokens: 1024,
+              messages: [{ role: 'user', content: finalPayload }]
+            })
+          });
+          const json = await res.json();
+          if (json.error) throw new Error(json.error.message);
+          responseText = json.content[0].text;
+        } else if (state.targetLLM === 'gemini') {
+          if (!apiKeys.gemini) throw new Error("API Key Gemini mancante. Configurala nelle Opzioni.");
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKeys.gemini}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: finalPayload }] }]
+            })
+          });
+          const json = await res.json();
+          if (json.error) throw new Error(json.error.message);
+          responseText = json.candidates[0].content.parts[0].text;
+        } else {
+          throw new Error("L'integrazione API per " + state.targetLLM + " non è supportata in questa versione.");
+        }
+
+        if (typeof marked !== 'undefined') {
+          apiOutput.innerHTML = marked.parse(responseText);
+        } else {
+          apiOutput.innerText = responseText;
+        }
+      } catch (err) {
+        apiOutput.innerHTML = `<span style="color: red;">Errore: ${err.message}</span>`;
+      } finally {
+        submitBtn.disabled = false;
       }
     }
   });

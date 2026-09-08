@@ -7,30 +7,91 @@
     "message": "Riassumi pagine web o testo selezionato utilizzando il tuo LLM preferito.",
     "description": "Description of the extension"
   },
-  "title": { "message": "LLM Summarizer" },
-  "textManagement": { "message": "1. Gestione Testo" },
-  "capturePage": { "message": "Cattura Pagina Intera" },
-  "captureSelection": { "message": "Cattura Selezione" },
-  "queueStatus": { "message": "Elementi in coda: " },
-  "clearQueue": { "message": "Svuota Coda" },
-  "viewQueue": { "message": "Visualizza Coda" },
-  "hideQueue": { "message": "Nascondi Coda" },
-  "charCount": { "message": "Caratteri" },
-  "tokenCount": { "message": "Token" },
-  "lengthWarning": { "message": "Attenzione: I testi molto lunghi potrebbero essere troncati o causare instabilità nella Web Mode." },
-  "configTitle": { "message": "2. Configurazione" },
-  "promptType": { "message": "Tipo di Prompt" },
-  "promptShort": { "message": "Riassunto Corto" },
-  "promptDetailed": { "message": "Riassunto Dettagliato" },
-  "promptChild": { "message": "Spiega come a un bambino" },
-  "promptCustom": { "message": "Personalizzato..." },
-  "customPromptLabel": { "message": "Prompt Personalizzato" },
-  "customPromptPlaceholder": { "message": "Scrivi qui il tuo prompt..." },
-  "targetLlm": { "message": "LLM di Destinazione" },
-  "submitBtn": { "message": "Invia a LLM" },
-  "submitBtnLoading": { "message": "Apertura Web Mode..." },
-  "apiOutputTitle": { "message": "Risposta API" },
-  "copyAll": { "message": "Copia Tutto" },
-  "queueEmpty": { "message": "La coda è vuota. Cattura del testo prima di inviare." },
-  "contextMenuAdd": { "message": "Aggiungi al riassunto (LLM)" }
+  "title": {
+    "message": "LLM Summarizer"
+  },
+  "textManagement": {
+    "message": "1. Gestione Testo"
+  },
+  "capturePage": {
+    "message": "Cattura Pagina Intera"
+  },
+  "captureSelection": {
+    "message": "Cattura Selezione"
+  },
+  "queueStatus": {
+    "message": "Elementi in coda: "
+  },
+  "clearQueue": {
+    "message": "Svuota Coda"
+  },
+  "viewQueue": {
+    "message": "Visualizza Coda"
+  },
+  "hideQueue": {
+    "message": "Nascondi Coda"
+  },
+  "charCount": {
+    "message": "Caratteri"
+  },
+  "tokenCount": {
+    "message": "Token"
+  },
+  "lengthWarning": {
+    "message": "Attenzione: I testi molto lunghi potrebbero essere troncati o causare instabilità nella Web Mode."
+  },
+  "configTitle": {
+    "message": "2. Configurazione"
+  },
+  "promptType": {
+    "message": "Tipo di Prompt"
+  },
+  "promptShort": {
+    "message": "Riassunto Corto"
+  },
+  "promptDetailed": {
+    "message": "Riassunto Dettagliato"
+  },
+  "promptChild": {
+    "message": "Spiega come a un bambino"
+  },
+  "promptCustom": {
+    "message": "Personalizzato..."
+  },
+  "customPromptLabel": {
+    "message": "Prompt Personalizzato"
+  },
+  "customPromptPlaceholder": {
+    "message": "Scrivi qui il tuo prompt..."
+  },
+  "targetLlm": {
+    "message": "LLM di Destinazione"
+  },
+  "submitBtn": {
+    "message": "Invia a LLM"
+  },
+  "submitBtnLoading": {
+    "message": "Apertura Web Mode..."
+  },
+  "apiOutputTitle": {
+    "message": "Risposta API"
+  },
+  "copyAll": {
+    "message": "Copia Tutto"
+  },
+  "queueEmpty": {
+    "message": "La coda è vuota. Cattura del testo prima di inviare."
+  },
+  "contextMenuAdd": {
+    "message": "Aggiungi al riassunto (LLM)"
+  },
+  "toastCapturedSelection": {
+    "message": "Catturata selezione:"
+  },
+  "toastCapturedPage": {
+    "message": "Catturata pagina:"
+  },
+  "textLabel": {
+    "message": "Testo:"
+  }
 }

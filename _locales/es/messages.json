@@ -1,0 +1,97 @@
+{
+  "extensionName": {
+    "message": "LLM Web-Summarizer",
+    "description": "Name of the extension"
+  },
+  "extensionDesc": {
+    "message": "Resume páginas web o texto seleccionado usando tu LLM favorito.",
+    "description": "Description of the extension"
+  },
+  "title": {
+    "message": "LLM Summarizer"
+  },
+  "textManagement": {
+    "message": "1. Gestión de Texto"
+  },
+  "capturePage": {
+    "message": "Capturar Página Completa"
+  },
+  "captureSelection": {
+    "message": "Capturar Selección"
+  },
+  "queueStatus": {
+    "message": "Elementos en cola: "
+  },
+  "clearQueue": {
+    "message": "Vaciar Cola"
+  },
+  "viewQueue": {
+    "message": "Ver Cola"
+  },
+  "hideQueue": {
+    "message": "Ocultar Cola"
+  },
+  "charCount": {
+    "message": "Caracteres"
+  },
+  "tokenCount": {
+    "message": "Tokens"
+  },
+  "lengthWarning": {
+    "message": "Advertencia: Los textos muy largos pueden cortarse o causar inestabilidad."
+  },
+  "configTitle": {
+    "message": "2. Configuración"
+  },
+  "promptType": {
+    "message": "Tipo de Prompt"
+  },
+  "promptShort": {
+    "message": "Resumen Corto"
+  },
+  "promptDetailed": {
+    "message": "Resumen Detallado"
+  },
+  "promptChild": {
+    "message": "Explica como a un niño"
+  },
+  "promptCustom": {
+    "message": "Personalizado..."
+  },
+  "customPromptLabel": {
+    "message": "Prompt Personalizado"
+  },
+  "customPromptPlaceholder": {
+    "message": "Escribe tu prompt aquí..."
+  },
+  "targetLlm": {
+    "message": "LLM de Destino"
+  },
+  "submitBtn": {
+    "message": "Enviar a LLM"
+  },
+  "submitBtnLoading": {
+    "message": "Abriendo Modo Web..."
+  },
+  "apiOutputTitle": {
+    "message": "Salida de API"
+  },
+  "copyAll": {
+    "message": "Copiar Todo"
+  },
+  "queueEmpty": {
+    "message": "La cola está vacía. Captura texto antes de enviar."
+  },
+  "contextMenuAdd": {
+    "message": "Añadir al Resumen (LLM)"
+  },
+  "toastCapturedSelection": {
+    "message": "Selección capturada:"
+  },
+  "toastCapturedPage": {
+    "message": "Página capturada:"
+  },
+  "textLabel": {
+    "message": "Texto:"
+  }
+}

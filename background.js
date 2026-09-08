@@ -10,10 +10,28 @@ chrome.runtime.onInstalled.addListener(() => {
 
 async function extractSelection(tabId) {
   try {
-    await chrome.scripting.executeScript({
+    const check = await chrome.scripting.executeScript({
       target: { tabId: tabId },
-      files: ['lib/Readability.js', 'content_source.js']
+      func: () => ({
+        hasReadability: typeof Readability !== 'undefined',
+        hasTurndown: typeof TurndownService !== 'undefined',
+        hasContentSource: typeof window.__llm_summarizer_injected !== 'undefined'
+      })
     });
+    
+    const status = check[0]?.result || {};
+    const filesToInject = [];
+    if (!status.hasReadability) filesToInject.push('lib/Readability.js');
+    if (!status.hasTurndown) filesToInject.push('lib/turndown.js');
+    if (!status.hasContentSource) filesToInject.push('content_source.js');
+
+    if (filesToInject.length > 0) {
+      await chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        files: filesToInject
+      });
+    }
+
     const res = await chrome.tabs.sendMessage(tabId, { action: 'getSelection' });
     return res?.text;
   } catch (err) {
