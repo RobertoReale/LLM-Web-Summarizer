@@ -3,56 +3,64 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LLM Web-Summarizer</title>
+  <title data-i18n="title">LLM Web-Summarizer</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <div class="app-container">
     <header class="header">
-      <h1>LLM Summarizer</h1>
+      <h1 data-i18n="title">LLM Summarizer</h1>
+      <button id="theme-toggle-btn" title="Toggle Theme">🌙</button>
     </header>
 
     <main class="main-content">
       <!-- Sezione 1: Gestione Testo -->
       <section class="section">
-        <h2>1. Gestione Testo</h2>
+        <h2 data-i18n="textManagement">1. Gestione Testo</h2>
         <div class="button-group">
-          <button id="capture-page-btn" class="btn primary">Cattura Pagina Intera</button>
-          <button id="capture-selection-btn" class="btn secondary">Cattura Selezione</button>
+          <button id="capture-page-btn" class="btn primary" data-i18n="capturePage">Cattura Pagina Intera</button>
+          <button id="capture-selection-btn" class="btn secondary" data-i18n="captureSelection">Cattura Selezione</button>
         </div>
         
         <div class="queue-status">
-          <span id="queue-counter">Elementi in coda: 0</span>
-          <button id="clear-queue-btn" class="btn text-btn">Svuota Coda</button>
+          <span id="queue-counter" data-i18n="queueStatus">Elementi in coda: 0</span>
+          <div class="queue-actions">
+            <button id="view-queue-btn" class="btn action-btn" data-i18n="viewQueue">Visualizza</button>
+            <button id="clear-queue-btn" class="btn text-btn" data-i18n="clearQueue">Svuota</button>
+          </div>
+        </div>
+
+        <div id="queue-viewer-container" class="queue-viewer hidden">
+          <textarea id="queue-editor" class="queue-editor"></textarea>
         </div>
         
         <div class="length-indicator">
           <div class="progress-bar"><div id="length-progress" class="progress-fill"></div></div>
-          <span id="length-text">0 Caratteri / 0 Token</span>
-          <div id="length-warning" class="warning-tooltip hidden">Attenzione: I testi molto lunghi potrebbero essere troncati o causare instabilità nella Web Mode.</div>
+          <span id="length-text">0 <span data-i18n="charCount">Caratteri</span> / 0 <span data-i18n="tokenCount">Token</span></span>
+          <div id="length-warning" class="warning-tooltip hidden" data-i18n="lengthWarning">Attenzione: I testi molto lunghi potrebbero essere troncati o causare instabilità nella Web Mode.</div>
         </div>
       </section>
 
       <!-- Sezione 2: Configurazione Prompt & LLM -->
       <section class="section">
-        <h2>2. Configurazione</h2>
+        <h2 data-i18n="configTitle">2. Configurazione</h2>
         <div class="form-group">
-          <label for="prompt-type">Tipo di Prompt</label>
+          <label for="prompt-type" data-i18n="promptType">Tipo di Prompt</label>
           <select id="prompt-type" class="form-control">
-            <option value="Riassumi Brevemente">Riassunto Corto</option>
-            <option value="Riassumi Dettagliatamente">Riassunto Dettagliato</option>
-            <option value="Spiega come a un bambino">Spiega come a un bambino</option>
-            <option value="custom">Personalizzato...</option>
+            <option value="Riassumi Brevemente" data-i18n="promptShort">Riassunto Corto</option>
+            <option value="Riassumi Dettagliatamente" data-i18n="promptDetailed">Riassunto Dettagliato</option>
+            <option value="Spiega come a un bambino" data-i18n="promptChild">Spiega come a un bambino</option>
+            <option value="custom" data-i18n="promptCustom">Personalizzato...</option>
           </select>
         </div>
         
         <div class="form-group hidden" id="custom-prompt-container">
-          <label for="custom-prompt">Prompt Personalizzato</label>
-          <textarea id="custom-prompt" class="form-control" rows="3" placeholder="Scrivi qui il tuo prompt..."></textarea>
+          <label for="custom-prompt" data-i18n="customPromptLabel">Prompt Personalizzato</label>
+          <textarea id="custom-prompt" class="form-control" rows="3" data-i18n-placeholder="customPromptPlaceholder" placeholder="Scrivi qui il tuo prompt..."></textarea>
         </div>
         
         <div class="form-group">
-          <label for="target-llm">LLM di Destinazione</label>
+          <label for="target-llm" data-i18n="targetLlm">LLM di Destinazione</label>
           <select id="target-llm" class="form-control">
             <option value="chatgpt">ChatGPT</option>
             <option value="claude">Claude</option>
@@ -77,12 +85,12 @@
 
       <!-- Sezione 3: Azione e Output -->
       <section class="section action-section">
-        <button id="submit-btn" class="btn massive-btn">Invia a LLM</button>
+        <button id="submit-btn" class="btn massive-btn" data-i18n="submitBtn">Invia a LLM</button>
         
         <div id="api-output-container" class="output-container hidden">
           <div class="output-header">
-            <h3>Risposta API</h3>
-            <button id="copy-output-btn" class="btn icon-btn">Copia Tutto</button>
+            <h3 data-i18n="apiOutputTitle">Risposta API</h3>
+            <button id="copy-output-btn" class="btn icon-btn" data-i18n="copyAll">Copia Tutto</button>
           </div>
           <div id="api-output" class="markdown-body">
             <!-- Render markdown qui -->

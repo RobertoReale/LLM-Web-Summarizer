@@ -1,8 +1,33 @@
 document.addEventListener('DOMContentLoaded', async () => {
-  // Elements
+  // --- i18n Localization ---
+  const localizeUI = () => {
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const msg = chrome.i18n.getMessage(el.getAttribute('data-i18n'));
+      if (msg) {
+        // Special case for option elements inside select
+        if (el.tagName === 'OPTION') {
+          el.innerText = msg;
+        } else {
+          el.innerHTML = msg;
+        }
+      }
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+      const msg = chrome.i18n.getMessage(el.getAttribute('data-i18n-placeholder'));
+      if (msg) el.setAttribute('placeholder', msg);
+    });
+  };
+  localizeUI();
+
+  // --- Elements ---
+  const themeToggleBtn = document.getElementById('theme-toggle-btn');
   const capturePageBtn = document.getElementById('capture-page-btn');
   const captureSelectionBtn = document.getElementById('capture-selection-btn');
   const clearQueueBtn = document.getElementById('clear-queue-btn');
+  const viewQueueBtn = document.getElementById('view-queue-btn');
+  const queueViewerContainer = document.getElementById('queue-viewer-container');
+  const queueEditor = document.getElementById('queue-editor');
+  
   const queueCounter = document.getElementById('queue-counter');
   const lengthProgress = document.getElementById('length-progress');
   const lengthText = document.getElementById('length-text');
@@ -19,13 +44,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   const apiOutput = document.getElementById('api-output');
   const copyOutputBtn = document.getElementById('copy-output-btn');
 
-  // Load state
+  // --- State ---
   let state = {
     textQueue: [],
     selectedPrompt: 'Riassumi Brevemente',
     customPromptText: '',
     targetLLM: 'chatgpt',
-    executionMode: 'web'
+    executionMode: 'web',
+    isDarkMode: true
   };
 
   try {
@@ -35,16 +61,85 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (res.customPromptText) state.customPromptText = res.customPromptText;
     if (res.targetLLM) state.targetLLM = res.targetLLM;
     if (res.executionMode) state.executionMode = res.executionMode;
+    if (res.isDarkMode !== undefined) {
+      state.isDarkMode = res.isDarkMode;
+    } else {
+      // Check system preference
+      state.isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
   } catch (e) {
     console.error("Failed to load state", e);
   }
 
-  // Init UI
+  // --- Theme Management ---
+  const applyTheme = (isDark) => {
+    if (isDark) {
+      document.body.classList.add('dark');
+      themeToggleBtn.innerText = '☀️';
+    } else {
+      document.body.classList.remove('dark');
+      themeToggleBtn.innerText = '🌙';
+    }
+  };
+  applyTheme(state.isDarkMode);
+
+  themeToggleBtn.addEventListener('click', () => {
+    state.isDarkMode = !state.isDarkMode;
+    applyTheme(state.isDarkMode);
+    chrome.storage.local.set({ isDarkMode: state.isDarkMode });
+  });
+
+  // --- Init UI ---
   promptType.value = state.selectedPrompt;
   customPrompt.value = state.customPromptText;
   targetLlm.value = state.targetLLM;
   const activeRadio = document.querySelector(`input[name="execution-mode"][value="${state.executionMode}"]`);
   if (activeRadio) activeRadio.checked = true;
+
+  const updateUI = () => {
+    // Prompt config
+    if (state.selectedPrompt === 'custom') {
+      customPromptContainer.classList.remove('hidden');
+    } else {
+      customPromptContainer.classList.add('hidden');
+    }
+
+    // Queue status
+    const countMsg = chrome.i18n.getMessage('queueStatus') || 'Elementi in coda: ';
+    queueCounter.innerText = `${countMsg}${state.textQueue.length}`;
+    
+    // Editor syncing
+    const fullText = state.textQueue.join('\n\n---\n\n');
+    if (document.activeElement !== queueEditor) {
+      queueEditor.value = fullText;
+    }
+
+    // Token math (approssimazione: 1 token = 4 caratteri)
+    const charCount = fullText.length;
+    const tokenCount = Math.floor(charCount / 4);
+    
+    const charMsg = chrome.i18n.getMessage('charCount') || 'Caratteri';
+    const tokenMsg = chrome.i18n.getMessage('tokenCount') || 'Token';
+    lengthText.innerText = `${charCount.toLocaleString()} ${charMsg} / ~${tokenCount.toLocaleString()} ${tokenMsg}`;
+
+    // Web mode limits warning (approx 12k tokens max for safety)
+    const MAX_TOKENS = 12000; 
+    const percentage = Math.min((tokenCount / MAX_TOKENS) * 100, 100);
+    lengthProgress.style.width = `${percentage}%`;
+
+    if (percentage > 80) {
+      lengthProgress.style.backgroundColor = 'var(--warning-color)';
+    } else {
+      lengthProgress.style.backgroundColor = 'var(--primary-color)';
+    }
+
+    if (tokenCount > MAX_TOKENS && state.executionMode === 'web') {
+      lengthWarning.classList.remove('hidden');
+      lengthProgress.style.backgroundColor = 'var(--danger-color)';
+    } else {
+      lengthWarning.classList.add('hidden');
+    }
+  };
   updateUI();
 
   // Save state helper
@@ -53,7 +148,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateUI();
   };
 
-  // UI Event Listeners
+  // Listen to storage changes from background.js (e.g., Context Menus)
+  chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'local' && changes.textQueue) {
+      state.textQueue = changes.textQueue.newValue || [];
+      updateUI();
+    }
+  });
+
+  // --- UI Event Listeners ---
   promptType.addEventListener('change', (e) => {
     state.selectedPrompt = e.target.value;
     saveState();
@@ -76,7 +179,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // Capture helpers
+  // Queue Viewer
+  viewQueueBtn.addEventListener('click', () => {
+    const isHidden = queueViewerContainer.classList.contains('hidden');
+    if (isHidden) {
+      queueViewerContainer.classList.remove('hidden');
+      viewQueueBtn.innerText = chrome.i18n.getMessage('hideQueue') || 'Nascondi';
+    } else {
+      queueViewerContainer.classList.add('hidden');
+      viewQueueBtn.innerText = chrome.i18n.getMessage('viewQueue') || 'Visualizza';
+    }
+  });
+
+  queueEditor.addEventListener('input', (e) => {
+    // If the user edits manually, we flatten the queue to a single item
+    state.textQueue = e.target.value.trim() ? [e.target.value] : [];
+    saveState();
+  });
+
+  clearQueueBtn.addEventListener('click', () => {
+    state.textQueue = [];
+    saveState();
+  });
+
+  // --- Capture helpers ---
   const injectAndCall = async (method) => {
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -90,7 +216,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Fallback injection if not already loaded
         await chrome.scripting.executeScript({
           target: { tabId: tab.id },
-          files: ['content_source.js']
+          files: ['lib/Readability.js', 'content_source.js']
         });
         const retryResponse = await chrome.tabs.sendMessage(tab.id, { action: method });
         if (retryResponse && retryResponse.text) {
@@ -105,7 +231,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (tab) {
          await chrome.scripting.executeScript({
           target: { tabId: tab.id },
-          files: ['content_source.js']
+          files: ['lib/Readability.js', 'content_source.js']
         });
         const retryResponse = await chrome.tabs.sendMessage(tab.id, { action: method }).catch(()=>({}));
         if (retryResponse && retryResponse.text) {
@@ -119,24 +245,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   capturePageBtn.addEventListener('click', () => injectAndCall('getPageText'));
   captureSelectionBtn.addEventListener('click', () => injectAndCall('getSelection'));
 
-  clearQueueBtn.addEventListener('click', () => {
-    state.textQueue = [];
-    saveState();
-  });
-
-  // Submit
+  // --- Submit ---
   submitBtn.addEventListener('click', async () => {
     if (state.textQueue.length === 0) {
-      alert("La coda è vuota. Cattura del testo prima di inviare.");
+      alert(chrome.i18n.getMessage('queueEmpty') || "La coda è vuota. Cattura del testo prima di inviare.");
       return;
     }
 
     const fullText = state.textQueue.join('\n\n---\n\n');
-    let prompt = state.selectedPrompt === 'custom' ? state.customPromptText : state.selectedPrompt;
-    const finalPayload = `${prompt}\n\nTesto:\n${fullText}`;
+    let promptValue = state.selectedPrompt === 'custom' ? state.customPromptText : state.selectedPrompt;
+    
+    // We should translate the standard prompts if possible, but actually we pass them verbatim to the LLM. 
+    // Wait, the standard prompts like "Riassumi Brevemente" are passed to LLM. Better pass the Italian string or let the user decide.
+    // For now we pass the literal value.
+    
+    const finalPayload = `${promptValue}\n\nTesto:\n${fullText}`;
 
     if (state.executionMode === 'web') {
-      submitBtn.textContent = 'Apertura Web Mode...';
+      submitBtn.textContent = chrome.i18n.getMessage('submitBtnLoading') || 'Apertura Web Mode...';
       submitBtn.disabled = true;
       chrome.runtime.sendMessage({ action: 'triggerWebMode', payload: finalPayload, target: state.targetLLM });
       setTimeout(() => window.close(), 1000);
@@ -151,44 +277,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Copy API output
   copyOutputBtn.addEventListener('click', () => {
     navigator.clipboard.writeText(apiOutput.innerText);
-    copyOutputBtn.textContent = 'Copiato!';
-    setTimeout(() => copyOutputBtn.textContent = 'Copia Tutto', 2000);
+    const origText = copyOutputBtn.innerText;
+    copyOutputBtn.innerText = 'Copiato!';
+    setTimeout(() => copyOutputBtn.innerText = origText, 2000);
   });
-
-  // Listen for updates from background (e.g. shortcut triggered)
-  chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && changes.textQueue) {
-      state.textQueue = changes.textQueue.newValue || [];
-      updateUI();
-    }
-  });
-
-  function updateUI() {
-    customPromptContainer.classList.toggle('hidden', state.selectedPrompt !== 'custom');
-    queueCounter.textContent = `Elementi in coda: ${state.textQueue.length}`;
-    
-    const totalChars = state.textQueue.reduce((acc, text) => acc + text.length, 0);
-    const estimatedTokens = Math.floor(totalChars / 4);
-    lengthText.textContent = `${totalChars.toLocaleString()} Caratteri / ~${estimatedTokens.toLocaleString()} Token`;
-    
-    // Progress bar (max 20000 chars roughly)
-    const MAX_CHARS = 20000;
-    let percentage = (totalChars / MAX_CHARS) * 100;
-    if (percentage > 100) percentage = 100;
-    lengthProgress.style.width = `${percentage}%`;
-
-    if (totalChars > 15000) {
-      lengthProgress.style.backgroundColor = 'var(--danger-color)';
-      lengthWarning.classList.remove('hidden');
-    } else if (totalChars > 10000) {
-      lengthProgress.style.backgroundColor = 'var(--warning-color)';
-      lengthWarning.classList.add('hidden');
-    } else {
-      lengthProgress.style.backgroundColor = 'var(--primary-color)';
-      lengthWarning.classList.add('hidden');
-    }
-  }
 });

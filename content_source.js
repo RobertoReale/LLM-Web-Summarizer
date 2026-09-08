@@ -8,21 +8,35 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
   
   if (request.action === 'getPageText') {
-    // Clone body per pulirlo
-    const bodyClone = document.body.cloneNode(true);
+    try {
+      if (typeof Readability !== 'undefined') {
+        const documentClone = document.cloneNode(true);
+        const article = new Readability(documentClone).parse();
+        
+        if (article && article.textContent) {
+          // Article title + clean text content
+          const text = `${article.title}\n\n${article.textContent.replace(/\s+/g, ' ').trim()}`;
+          sendResponse({ text });
+          return true;
+        }
+      }
+      
+      // Fallback in caso Readability fallisca o non sia caricato
+      const bodyClone = document.body.cloneNode(true);
+      const tagsToRemove = ['script', 'style', 'noscript', 'iframe', 'nav', 'footer', 'header', 'aside', 'svg', 'canvas'];
+      tagsToRemove.forEach(tag => {
+        const elements = bodyClone.querySelectorAll(tag);
+        elements.forEach(el => el.remove());
+      });
+      let text = bodyClone.textContent || "";
+      text = text.replace(/\s+/g, ' ').trim();
+      sendResponse({ text: text });
+      
+    } catch (e) {
+      console.error("Extraction error:", e);
+      sendResponse({ text: document.body.innerText });
+    }
     
-    // Rimuovi elementi di rumore
-    const tagsToRemove = ['script', 'style', 'noscript', 'iframe', 'nav', 'footer', 'header', 'aside', 'svg', 'canvas'];
-    tagsToRemove.forEach(tag => {
-      const elements = bodyClone.querySelectorAll(tag);
-      elements.forEach(el => el.remove());
-    });
-    
-    // Estrai textContent e normalizza spazi
-    let text = bodyClone.textContent || "";
-    text = text.replace(/\s+/g, ' ').trim();
-    
-    sendResponse({ text: text });
     return true; // async
   }
 });

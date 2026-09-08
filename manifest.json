@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "LLM Web-Summarizer & Prompt Injector",
+  "name": "__MSG_extensionName__",
   "version": "1.0.0",
-  "description": "Estrai testo dalle pagine web, aggiungilo a una coda e invialo ai principali LLM tramite Web Mode o API.",
+  "description": "__MSG_extensionDesc__",
+  "default_locale": "it",
   "permissions": [
     "activeTab",
     "scripting",

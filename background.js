@@ -3,19 +3,7 @@
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: "add-to-queue",
-    title: "Aggiungi alla coda",
-    contexts: ["selection"]
-  });
-  
-  chrome.contextMenus.create({
-    id: "summarize-web",
-    title: "Riassumi (Breve) - Web Mode",
-    contexts: ["selection"]
-  });
-  
-  chrome.contextMenus.create({
-    id: "custom-prompt",
-    title: "Applica prompt personalizzato",
+    title: chrome.i18n.getMessage("contextMenuAdd") || "Aggiungi al riassunto (LLM)",
     contexts: ["selection"]
   });
 });
@@ -29,7 +17,7 @@ async function extractSelection(tabId) {
     try {
       await chrome.scripting.executeScript({
         target: { tabId: tabId },
-        files: ['content_source.js']
+        files: ['lib/Readability.js', 'content_source.js']
       });
       const res = await chrome.tabs.sendMessage(tabId, { action: 'getSelection' });
       return res?.text;
@@ -54,13 +42,6 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
   if (info.menuItemId === "add-to-queue") {
     await addToQueue(text);
-  } else if (info.menuItemId === "summarize-web") {
-    await addToQueue(text);
-    triggerWebMode("Riassumi Brevemente\n\nTesto:\n" + text, "chatgpt");
-  } else if (info.menuItemId === "custom-prompt") {
-    await addToQueue(text);
-    const { customPromptText = "Scrivi un prompt:" } = await chrome.storage.local.get('customPromptText');
-    triggerWebMode(`${customPromptText}\n\nTesto:\n${text}`, "chatgpt");
   }
 });
 
