@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "LLM Web-Summarizer & Prompt Injector",
+  "version": "1.0.0",
+  "description": "Estrai testo dalle pagine web, aggiungilo a una coda e invialo ai principali LLM tramite Web Mode o API.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "contextMenus",
+    "clipboardWrite",
+    "clipboardRead"
+  ],
+  "host_permissions": [
+    "*://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "LLM Web-Summarizer"
+  },
+  "commands": {
+    "add-to-queue": {
+      "suggested_key": {
+        "default": "Alt+S",
+        "mac": "MacCtrl+S"
+      },
+      "description": "Aggiungi testo alla coda"
+    }
+  }
+}

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM Web-Summarizer</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app-container">
+    <header class="header">
+      <h1>LLM Summarizer</h1>
+    </header>
+
+    <main class="main-content">
+      <!-- Sezione 1: Gestione Testo -->
+      <section class="section">
+        <h2>1. Gestione Testo</h2>
+        <div class="button-group">
+          <button id="capture-page-btn" class="btn primary">Cattura Pagina Intera</button>
+          <button id="capture-selection-btn" class="btn secondary">Cattura Selezione</button>
+        </div>
+        
+        <div class="queue-status">
+          <span id="queue-counter">Elementi in coda: 0</span>
+          <button id="clear-queue-btn" class="btn text-btn">Svuota Coda</button>
+        </div>
+        
+        <div class="length-indicator">
+          <div class="progress-bar"><div id="length-progress" class="progress-fill"></div></div>
+          <span id="length-text">0 Caratteri / 0 Token</span>
+          <div id="length-warning" class="warning-tooltip hidden">Attenzione: I testi molto lunghi potrebbero essere troncati o causare instabilità nella Web Mode.</div>
+        </div>
+      </section>
+
+      <!-- Sezione 2: Configurazione Prompt & LLM -->
+      <section class="section">
+        <h2>2. Configurazione</h2>
+        <div class="form-group">
+          <label for="prompt-type">Tipo di Prompt</label>
+          <select id="prompt-type" class="form-control">
+            <option value="Riassumi Brevemente">Riassunto Corto</option>
+            <option value="Riassumi Dettagliatamente">Riassunto Dettagliato</option>
+            <option value="Spiega come a un bambino">Spiega come a un bambino</option>
+            <option value="custom">Personalizzato...</option>
+          </select>
+        </div>
+        
+        <div class="form-group hidden" id="custom-prompt-container">
+          <label for="custom-prompt">Prompt Personalizzato</label>
+          <textarea id="custom-prompt" class="form-control" rows="3" placeholder="Scrivi qui il tuo prompt..."></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label for="target-llm">LLM di Destinazione</label>
+          <select id="target-llm" class="form-control">
+            <option value="chatgpt">ChatGPT</option>
+            <option value="claude">Claude</option>
+            <option value="gemini">Gemini</option>
+            <option value="perplexity">Perplexity</option>
+          </select>
+        </div>
+
+        <div class="mode-selector form-group">
+          <label class="radio-label">
+            <input type="radio" name="execution-mode" value="web" checked>
+            <span class="radio-custom"></span>
+            Web Mode
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="execution-mode" value="api">
+            <span class="radio-custom"></span>
+            API Mode
+          </label>
+        </div>
+      </section>
+
+      <!-- Sezione 3: Azione e Output -->
+      <section class="section action-section">
+        <button id="submit-btn" class="btn massive-btn">Invia a LLM</button>
+        
+        <div id="api-output-container" class="output-container hidden">
+          <div class="output-header">
+            <h3>Risposta API</h3>
+            <button id="copy-output-btn" class="btn icon-btn">Copia Tutto</button>
+          </div>
+          <div id="api-output" class="markdown-body">
+            <!-- Render markdown qui -->
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  
+  <script src="lib/marked.min.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
