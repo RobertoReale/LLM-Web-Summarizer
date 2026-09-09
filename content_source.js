@@ -68,6 +68,11 @@ if (typeof window.__llm_summarizer_injected === 'undefined') {
       try {
         if (typeof Readability !== 'undefined') {
           const documentClone = document.cloneNode(true);
+          
+          // Pre-clean common noise elements (Wikipedia references, edit links, hidden stuff)
+          const elementsToRemove = documentClone.querySelectorAll('.mw-editsection, .reference, .navbox, .metadata, .infobox, .thumb, [aria-hidden="true"], nav, footer, aside');
+          elementsToRemove.forEach(el => el.remove());
+
           const article = new Readability(documentClone).parse();
           
           if (article && (article.content || article.textContent)) {
@@ -75,6 +80,23 @@ if (typeof window.__llm_summarizer_injected === 'undefined') {
             let extractedText = "";
             if (typeof TurndownService !== 'undefined') {
               const turndownService = new TurndownService({ headingStyle: 'atx' });
+              
+              // Optimize for LLMs: remove links and keep only the text content
+              turndownService.addRule('removeLinks', {
+                filter: 'a',
+                replacement: function (content) {
+                  return content;
+                }
+              });
+              
+              // Optimize for LLMs: remove images as they are useless for text summaries and take up tokens
+              turndownService.addRule('removeImages', {
+                filter: 'img',
+                replacement: function () {
+                  return '';
+                }
+              });
+
               extractedText = turndownService.turndown(article.content || "");
             } else {
               extractedText = (article.textContent || "").replace(/\s+/g, ' ').trim();
@@ -89,14 +111,23 @@ if (typeof window.__llm_summarizer_injected === 'undefined') {
         
         // Fallback in caso Readability fallisca o non sia caricato
         const bodyClone = document.body.cloneNode(true);
-        const tagsToRemove = ['script', 'style', 'noscript', 'iframe', 'nav', 'footer', 'header', 'aside', 'svg', 'canvas'];
-        tagsToRemove.forEach(tag => {
-          const elements = bodyClone.querySelectorAll(tag);
+        const tagsToRemove = ['script', 'style', 'noscript', 'iframe', 'nav', 'footer', 'header', 'aside', 'svg', 'canvas', '.mw-editsection', '.reference', '.navbox'];
+        tagsToRemove.forEach(selector => {
+          const elements = bodyClone.querySelectorAll(selector);
           elements.forEach(el => el.remove());
         });
+        
         let text = "";
         if (typeof TurndownService !== 'undefined') {
           const turndownService = new TurndownService({ headingStyle: 'atx' });
+          turndownService.addRule('removeLinks', {
+            filter: 'a',
+            replacement: function (content) { return content; }
+          });
+          turndownService.addRule('removeImages', {
+            filter: 'img',
+            replacement: function () { return ''; }
+          });
           text = turndownService.turndown(bodyClone.innerHTML);
         } else {
           text = bodyClone.textContent || "";
