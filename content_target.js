@@ -10,7 +10,7 @@ async function injectPayload() {
     return;
   }
 
-  const { text, target } = pendingInjection;
+  const { text, target, autoSubmit } = pendingInjection;
 
   const { customSelectors } = await chrome.storage.local.get('customSelectors');
   
@@ -48,9 +48,63 @@ async function injectPayload() {
   const success = pasteText(input, text);
   if (success) {
     console.log("LLM Web-Summarizer: Testo incollato con successo.");
+    
+    if (autoSubmit) {
+      await new Promise(r => setTimeout(r, 500));
+      submitForm(input, target);
+    }
+    
     await chrome.storage.local.remove('pendingInjection');
   } else {
     console.error("LLM Web-Summarizer: Fallita simulazione incolla.");
+  }
+}
+
+function submitForm(inputEl, target) {
+  const submitSelectors = {
+    chatgpt: [
+      'button[data-testid="send-button"]',
+      'button[aria-label*="Send"]',
+      'button[type="submit"]'
+    ],
+    claude: [
+      'button[aria-label*="Send Message"]',
+      'button[aria-label*="Send"]'
+    ],
+    gemini: [
+      'button[aria-label*="Send"]',
+      'button.send-button',
+      '.send-button'
+    ],
+    perplexity: [
+      'button[aria-label="Submit"]',
+      'button[aria-label*="Submit"]',
+      'button.submit-button'
+    ]
+  };
+
+  const selectors = submitSelectors[target] || ['button[type="submit"]'];
+  for (const sel of selectors) {
+    const btn = document.querySelector(sel);
+    if (btn && !btn.disabled) {
+      btn.click();
+      console.log("LLM Web-Summarizer: Form submitted via button click.");
+      return;
+    }
+  }
+
+  // Fallback: Dispatch Enter event
+  if (inputEl) {
+    const enterEvent = new KeyboardEvent('keydown', {
+      key: 'Enter',
+      code: 'Enter',
+      keyCode: 13,
+      which: 13,
+      bubbles: true,
+      cancelable: true
+    });
+    inputEl.dispatchEvent(enterEvent);
+    console.log("LLM Web-Summarizer: Form submitted via Enter key.");
   }
 }
 

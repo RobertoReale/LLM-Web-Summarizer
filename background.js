@@ -68,7 +68,7 @@ chrome.commands.onCommand.addListener(async (command, tab) => {
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'triggerWebMode') {
-    triggerWebMode(request.payload, request.target);
+    triggerWebMode(request.payload, request.target, request.autoSubmit);
   }
 });
 
@@ -79,7 +79,7 @@ const LLM_URLS = {
   perplexity: "https://www.perplexity.ai/"
 };
 
-async function triggerWebMode(payload, targetLlm) {
+async function triggerWebMode(payload, targetLlm, autoSubmit) {
   const url = LLM_URLS[targetLlm] || LLM_URLS.chatgpt;
   
   // Salva il payload per il content_target
@@ -87,6 +87,7 @@ async function triggerWebMode(payload, targetLlm) {
     pendingInjection: {
       text: payload,
       target: targetLlm,
+      autoSubmit: autoSubmit,
       timestamp: Date.now()
     }
   });

@@ -370,6 +370,50 @@ textarea.form-control {
   border-radius: 50%;
 }
 
+/* Checkboxes */
+.checkbox-group {
+  margin-top: 8px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.checkbox-label input {
+  display: none;
+}
+
+.checkbox-custom {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--text-muted);
+  border-radius: 4px;
+  margin-right: 8px;
+  position: relative;
+  display: inline-block;
+  transition: all var(--transition-speed);
+}
+
+.checkbox-label input:checked + .checkbox-custom {
+  border-color: var(--primary-color);
+  background-color: var(--primary-color);
+}
+
+.checkbox-label input:checked + .checkbox-custom::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 4px;
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
 /* API Output */
 .output-container {
   margin-top: 16px;

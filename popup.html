@@ -49,7 +49,6 @@
           <select id="prompt-type" class="form-control">
             <option value="promptShort" data-i18n="promptShort">Riassunto Corto</option>
             <option value="promptDetailed" data-i18n="promptDetailed">Riassunto Dettagliato</option>
-            <option value="promptChild" data-i18n="promptChild">Spiega come a un bambino</option>
             <option value="custom" data-i18n="promptCustom">Personalizzato...</option>
           </select>
         </div>
@@ -79,6 +78,14 @@
             <input type="radio" name="execution-mode" value="api">
             <span class="radio-custom"></span>
             API Mode
+          </label>
+        </div>
+        
+        <div class="form-group checkbox-group" id="autosubmit-container">
+          <label class="checkbox-label">
+            <input type="checkbox" id="autosubmit-cb" checked>
+            <span class="checkbox-custom"></span>
+            Auto-submit (Web Mode)
           </label>
         </div>
       </section>

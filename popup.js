@@ -38,6 +38,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const customPrompt = document.getElementById('custom-prompt');
   const targetLlm = document.getElementById('target-llm');
   const modeRadios = document.querySelectorAll('input[name="execution-mode"]');
+  const autosubmitContainer = document.getElementById('autosubmit-container');
+  const autosubmitCb = document.getElementById('autosubmit-cb');
   
   const submitBtn = document.getElementById('submit-btn');
   const apiOutputContainer = document.getElementById('api-output-container');
@@ -51,7 +53,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     customPromptText: '',
     targetLLM: 'chatgpt',
     executionMode: 'web',
-    isDarkMode: false
+    isDarkMode: false,
+    autoSubmit: true
   };
 
   try {
@@ -61,6 +64,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (res.customPromptText) state.customPromptText = res.customPromptText;
     if (res.targetLLM) state.targetLLM = res.targetLLM;
     if (res.executionMode) state.executionMode = res.executionMode;
+    if (res.autoSubmit !== undefined) state.autoSubmit = res.autoSubmit;
     if (res.isDarkMode !== undefined) {
       state.isDarkMode = res.isDarkMode;
     } else {
@@ -95,6 +99,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   targetLlm.value = state.targetLLM;
   const activeRadio = document.querySelector(`input[name="execution-mode"][value="${state.executionMode}"]`);
   if (activeRadio) activeRadio.checked = true;
+  if (autosubmitCb) autosubmitCb.checked = state.autoSubmit;
 
   const updateUI = () => {
     // Prompt config
@@ -102,6 +107,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       customPromptContainer.classList.remove('hidden');
     } else {
       customPromptContainer.classList.add('hidden');
+    }
+
+    if (state.executionMode === 'web') {
+      autosubmitContainer.classList.remove('hidden');
+    } else {
+      autosubmitContainer.classList.add('hidden');
     }
 
     // Queue status
@@ -189,6 +200,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
+  autosubmitCb.addEventListener('change', (e) => {
+    state.autoSubmit = e.target.checked;
+    saveState();
+  });
+
   // Queue Viewer
   viewQueueBtn.addEventListener('click', () => {
     const isHidden = queueViewerContainer.classList.contains('hidden');
@@ -271,7 +287,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (state.executionMode === 'web') {
       submitBtn.textContent = chrome.i18n.getMessage('submitBtnLoading') || 'Apertura Web Mode...';
       submitBtn.disabled = true;
-      chrome.runtime.sendMessage({ action: 'triggerWebMode', payload: finalPayload, target: state.targetLLM });
+      chrome.runtime.sendMessage({ action: 'triggerWebMode', payload: finalPayload, target: state.targetLLM, autoSubmit: state.autoSubmit });
       setTimeout(() => window.close(), 1000);
     } else {
       // API Mode 

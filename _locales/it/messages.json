@@ -52,9 +52,6 @@
   "promptDetailed": {
     "message": "Riassunto Dettagliato"
   },
-  "promptChild": {
-    "message": "Spiega come a un bambino"
-  },
   "promptCustom": {
     "message": "Personalizzato..."
   },
