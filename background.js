@@ -92,7 +92,8 @@ async function triggerWebMode(payload, targetLlm, autoSubmit) {
     }
   });
   
-  // Apri la tab
+  // Apri sempre una nuova tab (come richiesto)
+
   chrome.tabs.create({ url }, (newTab) => {
     // Inietto content_target.js quando la pagina è caricata
     chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
@@ -101,7 +102,7 @@ async function triggerWebMode(payload, targetLlm, autoSubmit) {
         chrome.scripting.executeScript({
           target: { tabId: newTab.id },
           files: ['content_target.js']
-        });
+        }).catch(err => console.error("Injection failed:", err));
       }
     });
   });

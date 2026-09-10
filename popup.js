@@ -45,12 +45,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   const apiOutputContainer = document.getElementById('api-output-container');
   const apiOutput = document.getElementById('api-output');
   const copyOutputBtn = document.getElementById('copy-output-btn');
+  const savePromptBtn = document.getElementById('save-prompt-btn');
+  const deletePromptBtn = document.getElementById('delete-prompt-btn');
 
   // --- State ---
   let state = {
     textQueue: [],
     selectedPrompt: 'promptShort',
     customPromptText: '',
+    savedPrompts: [], // {id, name, text}
     targetLLM: 'chatgpt',
     executionMode: 'web',
     isDarkMode: false,
@@ -60,6 +63,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     const res = await chrome.storage.local.get(null);
     if (res.textQueue) state.textQueue = res.textQueue;
+    if (res.savedPrompts) state.savedPrompts = res.savedPrompts;
     if (res.selectedPrompt) state.selectedPrompt = res.selectedPrompt;
     if (res.customPromptText) state.customPromptText = res.customPromptText;
     if (res.targetLLM) state.targetLLM = res.targetLLM;
@@ -102,9 +106,30 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (autosubmitCb) autosubmitCb.checked = state.autoSubmit;
 
   const updateUI = () => {
+    // Populate dropdown with saved prompts
+    // Keep first 3 fixed (Short, Detailed, Custom), then add saved ones
+    while (promptType.options.length > 3) {
+      promptType.remove(3);
+    }
+    state.savedPrompts.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.text = p.name;
+      promptType.add(opt);
+    });
+    promptType.value = state.selectedPrompt;
+
     // Prompt config
-    if (state.selectedPrompt === 'custom') {
+    if (state.selectedPrompt === 'custom' || state.selectedPrompt.startsWith('saved_')) {
       customPromptContainer.classList.remove('hidden');
+      if (state.selectedPrompt.startsWith('saved_')) {
+        const p = state.savedPrompts.find(x => x.id === state.selectedPrompt);
+        if (p) customPrompt.value = p.text;
+        deletePromptBtn.classList.remove('hidden');
+      } else {
+        customPrompt.value = state.customPromptText;
+        deletePromptBtn.classList.add('hidden');
+      }
     } else {
       customPromptContainer.classList.add('hidden');
     }
@@ -180,12 +205,45 @@ document.addEventListener('DOMContentLoaded', async () => {
   // --- UI Event Listeners ---
   promptType.addEventListener('change', (e) => {
     state.selectedPrompt = e.target.value;
+    if (state.selectedPrompt === 'custom') {
+      state.customPromptText = customPrompt.value;
+    }
     saveState();
   });
 
   customPrompt.addEventListener('input', (e) => {
-    state.customPromptText = e.target.value;
+    if (state.selectedPrompt === 'custom') {
+      state.customPromptText = e.target.value;
+    } else if (state.selectedPrompt.startsWith('saved_')) {
+      const p = state.savedPrompts.find(x => x.id === state.selectedPrompt);
+      if (p) p.text = e.target.value;
+    }
     debouncedSaveState();
+  });
+
+  savePromptBtn.addEventListener('click', () => {
+    const text = customPrompt.value.trim();
+    if (!text) return;
+    if (state.selectedPrompt === 'custom') {
+      const name = prompt("Nome del nuovo prompt:");
+      if (!name) return;
+      const newPrompt = { id: 'saved_' + Date.now(), name, text };
+      state.savedPrompts.push(newPrompt);
+      state.selectedPrompt = newPrompt.id;
+    } else if (state.selectedPrompt.startsWith('saved_')) {
+      const p = state.savedPrompts.find(x => x.id === state.selectedPrompt);
+      if (p) p.text = text;
+      alert("Prompt aggiornato!");
+    }
+    saveState();
+  });
+
+  deletePromptBtn.addEventListener('click', () => {
+    if (state.selectedPrompt.startsWith('saved_') && confirm("Vuoi davvero eliminare questo prompt?")) {
+      state.savedPrompts = state.savedPrompts.filter(x => x.id !== state.selectedPrompt);
+      state.selectedPrompt = 'custom';
+      saveState();
+    }
   });
 
   targetLlm.addEventListener('change', (e) => {
@@ -277,9 +335,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const fullText = state.textQueue.join('\n\n---\n\n');
-    let promptValue = state.selectedPrompt === 'custom' 
-      ? state.customPromptText 
-      : chrome.i18n.getMessage(state.selectedPrompt) || state.selectedPrompt;
+    let promptValue = "";
+    if (state.selectedPrompt === 'custom') {
+      promptValue = state.customPromptText;
+    } else if (state.selectedPrompt.startsWith('saved_')) {
+      const p = state.savedPrompts.find(x => x.id === state.selectedPrompt);
+      promptValue = p ? p.text : "";
+    } else {
+      promptValue = chrome.i18n.getMessage(state.selectedPrompt) || state.selectedPrompt;
+    }
     
     const textLabel = chrome.i18n.getMessage('textLabel') || "Testo:";
     const finalPayload = `${promptValue}\n\n${textLabel}\n${fullText}`;
@@ -301,6 +365,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         let responseText = "";
 
+        const renderStream = async (reader, decoder, processChunk) => {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value, { stream: true });
+            responseText += processChunk(chunk);
+            if (typeof marked !== 'undefined') {
+              apiOutput.innerHTML = marked.parse(responseText);
+            } else {
+              apiOutput.innerText = responseText;
+            }
+          }
+        };
+
         if (state.targetLLM === 'chatgpt') {
           if (!apiKeys.openai) throw new Error("API Key OpenAI mancante. Configurala nelle Opzioni.");
           const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -311,12 +389,28 @@ document.addEventListener('DOMContentLoaded', async () => {
             },
             body: JSON.stringify({
               model: 'gpt-3.5-turbo',
-              messages: [{ role: 'user', content: finalPayload }]
+              messages: [{ role: 'user', content: finalPayload }],
+              stream: true
             })
           });
-          const json = await res.json();
-          if (json.error) throw new Error(json.error.message);
-          responseText = json.choices[0].message.content;
+          if (!res.ok) throw new Error("Errore API OpenAI");
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder("utf-8");
+          await renderStream(reader, decoder, (chunk) => {
+            let addedText = "";
+            const lines = chunk.split('\n');
+            for (const line of lines) {
+              if (line.startsWith('data: ') && line.trim() !== 'data: [DONE]') {
+                try {
+                  const data = JSON.parse(line.substring(6));
+                  if (data.choices[0].delta.content) {
+                    addedText += data.choices[0].delta.content;
+                  }
+                } catch(e) {}
+              }
+            }
+            return addedText;
+          });
         } else if (state.targetLLM === 'claude') {
           if (!apiKeys.anthropic) throw new Error("API Key Anthropic mancante. Configurala nelle Opzioni.");
           const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -330,32 +424,88 @@ document.addEventListener('DOMContentLoaded', async () => {
             body: JSON.stringify({
               model: 'claude-3-haiku-20240307',
               max_tokens: 1024,
-              messages: [{ role: 'user', content: finalPayload }]
+              messages: [{ role: 'user', content: finalPayload }],
+              stream: true
             })
           });
-          const json = await res.json();
-          if (json.error) throw new Error(json.error.message);
-          responseText = json.content[0].text;
+          if (!res.ok) throw new Error("Errore API Anthropic");
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder("utf-8");
+          await renderStream(reader, decoder, (chunk) => {
+            let addedText = "";
+            const lines = chunk.split('\n');
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.substring(6));
+                  if (data.type === 'content_block_delta' && data.delta.text) {
+                    addedText += data.delta.text;
+                  }
+                } catch(e) {}
+              }
+            }
+            return addedText;
+          });
         } else if (state.targetLLM === 'gemini') {
           if (!apiKeys.gemini) throw new Error("API Key Gemini mancante. Configurala nelle Opzioni.");
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKeys.gemini}`, {
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=${apiKeys.gemini}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               contents: [{ parts: [{ text: finalPayload }] }]
             })
           });
-          const json = await res.json();
-          if (json.error) throw new Error(json.error.message);
-          responseText = json.candidates[0].content.parts[0].text;
+          if (!res.ok) throw new Error("Errore API Gemini");
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder("utf-8");
+          await renderStream(reader, decoder, (chunk) => {
+            let addedText = "";
+            const lines = chunk.split('\n');
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.substring(6));
+                  if (data.candidates && data.candidates[0].content.parts[0].text) {
+                    addedText += data.candidates[0].content.parts[0].text;
+                  }
+                } catch(e) {}
+              }
+            }
+            return addedText;
+          });
+        } else if (state.targetLLM === 'local') {
+          const url = apiKeys.localUrl || 'http://localhost:11434/api/generate';
+          // Se usa LM Studio /v1/chat/completions, usa il formato OpenAI
+          const isLMApi = url.includes('/v1/chat/completions');
+          const payload = isLMApi 
+            ? { messages: [{ role: 'user', content: finalPayload }], stream: true }
+            : { model: 'llama3', prompt: finalPayload, stream: true }; // Formato Ollama di default
+            
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) throw new Error("Errore chiamata Local LLM");
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder("utf-8");
+          await renderStream(reader, decoder, (chunk) => {
+            let addedText = "";
+            const lines = chunk.split('\n');
+            for (const line of lines) {
+              const cleanedLine = line.startsWith('data: ') ? line.substring(6) : line;
+              if (cleanedLine.trim() && cleanedLine.trim() !== '[DONE]') {
+                try {
+                  const data = JSON.parse(cleanedLine);
+                  if (data.response) addedText += data.response; // Ollama
+                  if (data.choices && data.choices[0].delta && data.choices[0].delta.content) addedText += data.choices[0].delta.content; // LM Studio
+                } catch(e) {}
+              }
+            }
+            return addedText;
+          });
         } else {
           throw new Error("L'integrazione API per " + state.targetLLM + " non è supportata in questa versione.");
-        }
-
-        if (typeof marked !== 'undefined') {
-          apiOutput.innerHTML = marked.parse(responseText);
-        } else {
-          apiOutput.innerText = responseText;
         }
       } catch (err) {
         apiOutput.innerHTML = `<span style="color: red;">Errore: ${err.message}</span>`;

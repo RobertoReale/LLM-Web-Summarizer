@@ -127,7 +127,22 @@ function waitForInput(selectors, timeoutMs) {
       if (found) { clearTimeout(timer); obs.disconnect(); resolve(found); }
     });
     obs.observe(document.documentElement, { childList: true, subtree: true });
-    timer = setTimeout(() => { obs.disconnect(); resolve(find()); }, timeoutMs);
+    timer = setTimeout(() => { 
+      obs.disconnect(); 
+      let found = find();
+      if (!found) {
+        // Fallback euristico
+        const fallbacks = document.querySelectorAll('textarea, [contenteditable="true"]');
+        for (const f of fallbacks) {
+          if (f.offsetParent !== null && !f.readOnly && !f.disabled) {
+            console.log("LLM Web-Summarizer: Usato selettore di fallback euristico.");
+            found = f;
+            break;
+          }
+        }
+      }
+      resolve(found); 
+    }, timeoutMs);
   });
 }
 

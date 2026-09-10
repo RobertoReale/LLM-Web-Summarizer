@@ -56,6 +56,10 @@
         <div class="form-group hidden" id="custom-prompt-container">
           <label for="custom-prompt" data-i18n="customPromptLabel">Prompt Personalizzato</label>
           <textarea id="custom-prompt" class="form-control" rows="3" data-i18n-placeholder="customPromptPlaceholder" placeholder="Scrivi qui il tuo prompt..."></textarea>
+          <div style="display: flex; gap: 8px; margin-top: 8px;">
+            <button id="save-prompt-btn" class="btn secondary" style="flex: 1; padding: 4px;">Salva</button>
+            <button id="delete-prompt-btn" class="btn text-btn hidden" style="color: var(--danger-color); flex: 1; padding: 4px;">Elimina</button>
+          </div>
         </div>
         
         <div class="form-group">
@@ -65,6 +69,7 @@
             <option value="claude">Claude</option>
             <option value="gemini">Gemini</option>
             <option value="perplexity">Perplexity</option>
+            <option value="local">Local (Ollama/LM Studio)</option>
           </select>
         </div>
 

@@ -31,6 +31,11 @@
           <label for="gemini-key">Google Gemini API Key</label>
           <input type="password" id="gemini-key" placeholder="AIza...">
         </div>
+        
+        <div class="form-group">
+          <label for="local-url">URL Locale (Ollama / LM Studio)</label>
+          <input type="text" id="local-url" placeholder="http://localhost:11434/api/generate">
+        </div>
       </section>
       
       <section class="card">
@@ -55,6 +60,26 @@
         <div class="form-group">
           <label for="perplexity-selectors">Perplexity Selectors</label>
           <input type="text" id="perplexity-selectors">
+        </div>
+      </section>
+      
+      <section class="card">
+        <h2>Opzioni di Estrazione (Markdown)</h2>
+        <p class="description">Scegli quali elementi mantenere quando l'estensione estrae il testo da una pagina.</p>
+        
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="keep-links">
+            <span class="checkbox-custom"></span>
+            Preserva i link nel testo
+          </label>
+        </div>
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="keep-images">
+            <span class="checkbox-custom"></span>
+            Preserva le immagini
+          </label>
         </div>
       </section>
       
