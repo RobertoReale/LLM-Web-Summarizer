@@ -47,6 +47,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const copyOutputBtn = document.getElementById('copy-output-btn');
   const savePromptBtn = document.getElementById('save-prompt-btn');
   const deletePromptBtn = document.getElementById('delete-prompt-btn');
+  const splitCopyBtn = document.getElementById('split-copy-btn');
 
   // --- State ---
   let state = {
@@ -58,6 +59,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     executionMode: 'web',
     isDarkMode: false,
     autoSubmit: true
+  };
+
+  let splitState = {
+    chunks: [],
+    currentIndex: 0
   };
 
   try {
@@ -172,8 +178,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (tokenCount > MAX_TOKENS && state.executionMode === 'web') {
       lengthWarning.classList.remove('hidden');
       lengthProgress.style.backgroundColor = 'var(--danger-color)';
+      splitCopyBtn.classList.remove('hidden');
+      if (splitState.chunks.length === 0) {
+        splitCopyBtn.innerText = 'Testo troppo lungo: Dividi e Copia (Parte 1)';
+      }
     } else {
       lengthWarning.classList.add('hidden');
+      splitCopyBtn.classList.add('hidden');
+      splitState.chunks = [];
+      splitState.currentIndex = 0;
     }
   };
   updateUI();
@@ -326,6 +339,54 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   capturePageBtn.addEventListener('click', () => injectAndCall('getPageText'));
   captureSelectionBtn.addEventListener('click', () => injectAndCall('getSelection'));
+
+  // --- Split & Copy ---
+  splitCopyBtn.addEventListener('click', () => {
+    if (splitState.chunks.length === 0) {
+      // Initialize chunks
+      const fullText = state.textQueue.join('\n\n---\n\n');
+      let promptValue = "";
+      if (state.selectedPrompt === 'custom') {
+        promptValue = state.customPromptText;
+      } else if (state.selectedPrompt.startsWith('saved_')) {
+        const p = state.savedPrompts.find(x => x.id === state.selectedPrompt);
+        promptValue = p ? p.text : "";
+      } else {
+        promptValue = chrome.i18n.getMessage(state.selectedPrompt) || state.selectedPrompt;
+      }
+      
+      const chunkSize = 35000; // approx characters
+      for (let i = 0; i < fullText.length; i += chunkSize) {
+        splitState.chunks.push(fullText.substring(i, i + chunkSize));
+      }
+      splitState.currentIndex = 0;
+    }
+
+    if (splitState.currentIndex < splitState.chunks.length) {
+      const isFirst = splitState.currentIndex === 0;
+      const isLast = splitState.currentIndex === splitState.chunks.length - 1;
+      
+      let payload = "";
+      if (isFirst) {
+        payload = `Questo testo è molto lungo, te lo invierò in ${splitState.chunks.length} parti. Non rispondere o riassumere finché non ti invio l'ultima parte scrivendo "FINE TESTO". Rispondi solo "Ok, attendo" a questa e alle prossime parti.\n\nEcco le istruzioni per quando avrai ricevuto tutto:\n${promptValue}\n\n--- PARTE 1 ---\n${splitState.chunks[splitState.currentIndex]}`;
+      } else if (isLast) {
+        payload = `--- PARTE ${splitState.currentIndex + 1} (FINE TESTO) ---\n${splitState.chunks[splitState.currentIndex]}`;
+      } else {
+        payload = `--- PARTE ${splitState.currentIndex + 1} ---\n${splitState.chunks[splitState.currentIndex]}`;
+      }
+
+      navigator.clipboard.writeText(payload);
+      splitState.currentIndex++;
+      
+      if (splitState.currentIndex < splitState.chunks.length) {
+        splitCopyBtn.innerText = `Copiata Parte ${splitState.currentIndex}. Clicca per copiare Parte ${splitState.currentIndex + 1}`;
+      } else {
+        splitCopyBtn.innerText = `Tutte le parti copiate! (Ricominicia)`;
+        splitState.chunks = [];
+        splitState.currentIndex = 0;
+      }
+    }
+  });
 
   // --- Submit ---
   submitBtn.addEventListener('click', async () => {

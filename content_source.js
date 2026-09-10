@@ -83,16 +83,25 @@ if (typeof window.__llm_summarizer_injected === 'undefined') {
     }
     
     if (request.action === 'getPageText') {
-      chrome.storage.local.get('markdownOptions').then((data) => {
+      chrome.storage.local.get('markdownOptions').then(async (data) => {
         const keepLinks = data.markdownOptions?.keepLinks || false;
         const keepImages = data.markdownOptions?.keepImages || false;
+        const autoScroll = data.markdownOptions?.autoScroll || false;
+
+        if (autoScroll) {
+          const originalScroll = window.scrollY;
+          window.scrollTo(0, document.body.scrollHeight);
+          await new Promise(r => setTimeout(r, 400));
+          window.scrollTo(0, originalScroll);
+          await new Promise(r => setTimeout(r, 100));
+        }
 
         try {
           if (typeof Readability !== 'undefined') {
             const documentClone = document.cloneNode(true);
             
             // Pre-clean common noise elements (Wikipedia references, edit links, hidden stuff)
-            const elementsToRemove = documentClone.querySelectorAll('.mw-editsection, .reference, .navbox, .metadata, .infobox, .thumb, [aria-hidden="true"], nav, footer, aside');
+            const elementsToRemove = documentClone.querySelectorAll('.mw-editsection, .reference, .navbox, .metadata, .infobox, .thumb, [aria-hidden="true"], nav, footer, aside, .cookie-banner, #cookie-notice, .paywall-overlay, [id*="cookie"], [class*="cookie"], [id*="paywall"], [class*="paywall"], dialog');
             elementsToRemove.forEach(el => el.remove());
 
             const article = new Readability(documentClone).parse();
@@ -131,7 +140,7 @@ if (typeof window.__llm_summarizer_injected === 'undefined') {
           
           // Fallback in caso Readability fallisca o non sia caricato
           const bodyClone = document.body.cloneNode(true);
-          const tagsToRemove = ['script', 'style', 'noscript', 'iframe', 'nav', 'footer', 'header', 'aside', 'svg', 'canvas', '.mw-editsection', '.reference', '.navbox'];
+          const tagsToRemove = ['script', 'style', 'noscript', 'iframe', 'nav', 'footer', 'header', 'aside', 'svg', 'canvas', '.mw-editsection', '.reference', '.navbox', '.cookie-banner', '#cookie-notice', '.paywall-overlay', '[id*="cookie"]', '[class*="cookie"]', '[id*="paywall"]', '[class*="paywall"]', 'dialog'];
           tagsToRemove.forEach(selector => {
             const elements = bodyClone.querySelectorAll(selector);
             elements.forEach(el => el.remove());

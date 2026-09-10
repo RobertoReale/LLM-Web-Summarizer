@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   const keepLinksCb = document.getElementById('keep-links');
   const keepImagesCb = document.getElementById('keep-images');
+  const autoScrollCb = document.getElementById('auto-scroll');
   
   const saveBtn = document.getElementById('save-btn');
   const statusMsg = document.getElementById('status-msg');
@@ -44,6 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const mdOptions = data.markdownOptions || {};
     if (keepLinksCb) keepLinksCb.checked = mdOptions.keepLinks || false;
     if (keepImagesCb) keepImagesCb.checked = mdOptions.keepImages || false;
+    if (autoScrollCb) autoScrollCb.checked = mdOptions.autoScroll || false;
   } catch (e) {
     console.error('Failed to load options', e);
   }
@@ -68,7 +70,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     const markdownOptions = {
       keepLinks: keepLinksCb ? keepLinksCb.checked : false,
-      keepImages: keepImagesCb ? keepImagesCb.checked : false
+      keepImages: keepImagesCb ? keepImagesCb.checked : false,
+      autoScroll: autoScrollCb ? autoScrollCb.checked : false
     };
     
     await chrome.storage.local.set({ apiKeys, customSelectors, markdownOptions });

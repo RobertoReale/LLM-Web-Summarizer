@@ -37,6 +37,7 @@ async function injectPayload() {
   const input = await waitForInput(cfg.inputs, 15000);
   if (!input) {
     console.error("LLM Web-Summarizer: Impossibile trovare l'area di testo per", target);
+    fallbackCopyToClipboard(text);
     return;
   }
 
@@ -57,7 +58,36 @@ async function injectPayload() {
     await chrome.storage.local.remove('pendingInjection');
   } else {
     console.error("LLM Web-Summarizer: Fallita simulazione incolla.");
+    fallbackCopyToClipboard(text);
   }
+}
+
+function fallbackCopyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    // Show a toast or alert
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+      position: fixed; top: 20px; right: 20px; z-index: 2147483647;
+      background-color: #f44336; color: white; padding: 16px 24px;
+      border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      font-family: system-ui, sans-serif; font-size: 15px; font-weight: 500;
+      animation: fadeIn 0.3s ease-in-out;
+    `;
+    toast.innerHTML = \`
+      <strong>LLM Web-Summarizer</strong><br/>
+      Impossibile incollare il testo automaticamente.<br/>
+      Il testo è stato copiato negli appunti.<br/>
+      Premi <strong>Ctrl+V</strong> (o Cmd+V) per incollarlo.
+    \`;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transition = 'opacity 0.5s';
+      setTimeout(() => toast.remove(), 500);
+    }, 10000);
+  }).catch(err => {
+    console.error("LLM Web-Summarizer: Impossibile copiare negli appunti", err);
+  });
 }
 
 function submitForm(inputEl, target) {
