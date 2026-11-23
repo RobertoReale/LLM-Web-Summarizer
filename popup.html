@@ -3,65 +3,113 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title data-i18n="title">LLM Web-Summarizer</title>
+  <title data-i18n="extensionName">LLM Web-Summarizer</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <div class="app-container">
     <header class="header">
       <h1 data-i18n="title">LLM Summarizer</h1>
-      <button id="theme-toggle-btn" title="Toggle Theme">🌙</button>
+      <div class="header-actions">
+        <button id="sidepanel-btn" type="button" class="header-icon-btn" data-i18n-title="openSidePanel" title="Apri nel pannello laterale" aria-label="Apri nel pannello laterale">◫</button>
+        <button id="options-btn" type="button" class="header-icon-btn" data-i18n-title="openOptions" title="Impostazioni" aria-label="Impostazioni">⚙️</button>
+        <button id="theme-toggle-btn" type="button" class="header-icon-btn" data-i18n-title="toggleTheme" title="Cambia tema" aria-label="Cambia tema">🌙</button>
+      </div>
     </header>
 
+    <div id="status-banner" class="status-banner hidden" role="status" aria-live="polite"></div>
+
     <main class="main-content">
-      <!-- Sezione 1: Gestione Testo -->
+      <!-- Section 1: Text Management -->
       <section class="section">
         <h2 data-i18n="textManagement">1. Gestione Testo</h2>
         <div class="button-group">
-          <button id="capture-page-btn" class="btn primary" data-i18n="capturePage">Cattura Pagina Intera</button>
-          <button id="capture-selection-btn" class="btn secondary" data-i18n="captureSelection">Cattura Selezione</button>
+          <button id="capture-page-btn" type="button" class="btn primary" data-i18n="capturePage">Cattura Pagina Intera</button>
+          <button id="capture-selection-btn" type="button" class="btn secondary" data-i18n="captureSelection">Cattura Selezione</button>
         </div>
-        
+
         <div class="queue-status">
-          <span id="queue-counter" data-i18n="queueStatus">Elementi in coda: 0</span>
+          <span id="queue-counter">0</span>
           <div class="queue-actions">
-            <button id="view-queue-btn" class="btn action-btn" data-i18n="viewQueue">Visualizza</button>
-            <button id="clear-queue-btn" class="btn text-btn" data-i18n="clearQueue">Svuota</button>
+            <button id="view-queue-btn" type="button" class="btn action-btn" data-i18n="viewQueue">Visualizza</button>
+            <button id="clear-queue-btn" type="button" class="btn text-btn" data-i18n="clearQueue">Svuota</button>
           </div>
         </div>
 
         <div id="queue-viewer-container" class="queue-viewer hidden">
-          <textarea id="queue-editor" class="queue-editor"></textarea>
+          <div id="queue-items-list" class="queue-items-list"></div>
+          <div class="queue-viewer-footer">
+            <button id="add-manual-item-btn" type="button" class="btn action-btn small-btn" data-i18n="addManualTextBtn">+ Aggiungi testo</button>
+          </div>
+          <div id="manual-add-row" class="manual-add-row hidden">
+            <textarea id="manual-item-input" class="queue-item-editor" rows="3" data-i18n-placeholder="queueEditorPlaceholder" placeholder="Incolla o scrivi testo da aggiungere..."></textarea>
+            <div class="manual-add-actions">
+              <button id="confirm-manual-item-btn" type="button" class="btn primary small-btn" data-i18n="addBtn">Aggiungi</button>
+              <button id="cancel-manual-item-btn" type="button" class="btn text-btn small-btn" data-i18n="cancelBtn">Annulla</button>
+            </div>
+          </div>
         </div>
-        
+
         <div class="length-indicator">
           <div class="progress-bar"><div id="length-progress" class="progress-fill"></div></div>
-          <span id="length-text">0 <span data-i18n="charCount">Caratteri</span> / 0 <span data-i18n="tokenCount">Token</span></span>
+          <span id="length-text">0 / ~0</span>
           <div id="length-warning" class="warning-tooltip hidden" data-i18n="lengthWarning">Attenzione: I testi molto lunghi potrebbero essere troncati o causare instabilità nella Web Mode.</div>
         </div>
       </section>
 
-      <!-- Sezione 2: Configurazione Prompt & LLM -->
+      <!-- Section 2: Prompt & LLM Configuration -->
       <section class="section">
         <h2 data-i18n="configTitle">2. Configurazione</h2>
-        <div class="form-group">
-          <label for="prompt-type" data-i18n="promptType">Tipo di Prompt</label>
-          <select id="prompt-type" class="form-control">
-            <option value="promptShort" data-i18n="promptShort">Riassunto Corto</option>
-            <option value="promptDetailed" data-i18n="promptDetailed">Riassunto Dettagliato</option>
-            <option value="custom" data-i18n="promptCustom">Personalizzato...</option>
-          </select>
-        </div>
-        
-        <div class="form-group hidden" id="custom-prompt-container">
-          <label for="custom-prompt" data-i18n="customPromptLabel">Prompt Personalizzato</label>
-          <textarea id="custom-prompt" class="form-control" rows="3" data-i18n-placeholder="customPromptPlaceholder" placeholder="Scrivi qui il tuo prompt..."></textarea>
-          <div style="display: flex; gap: 8px; margin-top: 8px;">
-            <button id="save-prompt-btn" class="btn secondary" style="flex: 1; padding: 4px;">Salva</button>
-            <button id="delete-prompt-btn" class="btn text-btn hidden" style="color: var(--danger-color); flex: 1; padding: 4px;">Elimina</button>
+
+        <div class="config-grid">
+          <div class="form-group">
+            <label for="prompt-type" data-i18n="promptType">Tipo di Prompt</label>
+            <div class="select-with-btn">
+              <select id="prompt-type" class="form-control">
+                <option value="promptShort" data-i18n="promptShort">Riassunto Corto</option>
+                <option value="promptDetailed" data-i18n="promptDetailed">Riassunto Dettagliato</option>
+                <option value="promptKeyPoints" data-i18n="promptKeyPoints">Punti Chiave</option>
+                <option value="custom" data-i18n="promptCustom">Personalizzato...</option>
+              </select>
+              <button id="toggle-prompt-editor-btn" type="button" class="btn icon-square-btn" data-i18n-title="togglePromptEditor" title="Mostra / modifica prompt" aria-label="Mostra / modifica prompt">✎</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="output-language" data-i18n="outputLanguageLabel">Lingua Output</label>
+            <select id="output-language" class="form-control">
+              <option value="auto" data-i18n="langAuto">Auto (lingua del testo)</option>
+              <option value="it" data-i18n="langIt">Italiano</option>
+              <option value="en" data-i18n="langEn">English</option>
+              <option value="es" data-i18n="langEs">Español</option>
+              <option value="fr" data-i18n="langFr">Français</option>
+              <option value="de" data-i18n="langDe">Deutsch</option>
+              <option value="pt" data-i18n="langPt">Português</option>
+            </select>
           </div>
         </div>
-        
+
+        <div class="form-group hidden" id="custom-prompt-container">
+          <div class="prompt-label-row">
+            <label for="custom-prompt" data-i18n="customPromptLabel">Testo Prompt</label>
+            <span id="prompt-modified-badge" class="modified-badge hidden" data-i18n="promptModifiedBadge">Modificato</span>
+          </div>
+          <textarea id="custom-prompt" class="form-control" rows="3" data-i18n-placeholder="customPromptPlaceholder" placeholder="Scrivi qui il tuo prompt..."></textarea>
+          <div class="prompt-placeholder-hint" data-i18n="promptPlaceholderHint">Opzionale: usa {{text}} per scegliere dove inserire il testo catturato.</div>
+          <div id="prompt-name-row" class="prompt-name-row hidden">
+            <input id="prompt-name-input" type="text" class="form-control" data-i18n-placeholder="promptNamePlaceholder" placeholder="Nome del prompt...">
+            <button id="confirm-save-prompt-btn" type="button" class="btn primary small-btn" data-i18n="confirmBtn">OK</button>
+            <button id="cancel-save-prompt-btn" type="button" class="btn text-btn small-btn" data-i18n="cancelBtn">Annulla</button>
+          </div>
+          <div class="prompt-actions-row">
+            <button id="update-prompt-btn" type="button" class="btn primary small-btn hidden" data-i18n="updatePromptBtn">Aggiorna</button>
+            <button id="save-prompt-btn" type="button" class="btn secondary small-btn" data-i18n="saveAsNewBtn">Salva nuovo</button>
+            <button id="rename-prompt-btn" type="button" class="btn action-btn small-btn hidden" data-i18n="renamePromptBtn">Rinomina</button>
+            <button id="revert-prompt-btn" type="button" class="btn text-btn small-btn hidden" data-i18n="revertPromptBtn">Ripristina</button>
+            <button id="delete-prompt-btn" type="button" class="btn text-btn danger-text small-btn hidden" data-i18n="deletePromptBtn">Elimina</button>
+          </div>
+        </div>
+
         <div class="form-group">
           <label for="target-llm" data-i18n="targetLlm">LLM di Destinazione</label>
           <select id="target-llm" class="form-control">
@@ -69,51 +117,80 @@
             <option value="claude">Claude</option>
             <option value="gemini">Gemini</option>
             <option value="perplexity">Perplexity</option>
-            <option value="local">Local (Ollama/LM Studio)</option>
+            <option value="local" data-i18n="localLlmOption">Local (Ollama / LM Studio)</option>
           </select>
         </div>
 
-        <div class="mode-selector form-group">
-          <label class="radio-label">
-            <input type="radio" name="execution-mode" value="web" checked>
-            <span class="radio-custom"></span>
-            Web Mode
+        <div class="mode-selector form-group" role="radiogroup" aria-label="Execution Mode">
+          <label class="radio-label" id="web-mode-label">
+            <input type="radio" name="execution-mode" value="web" class="sr-only" checked>
+            <span class="radio-custom" aria-hidden="true"></span>
+            <span data-i18n="webModeLabel">Web Mode</span>
           </label>
           <label class="radio-label">
-            <input type="radio" name="execution-mode" value="api">
-            <span class="radio-custom"></span>
-            API Mode
+            <input type="radio" name="execution-mode" value="api" class="sr-only">
+            <span class="radio-custom" aria-hidden="true"></span>
+            <span data-i18n="apiModeLabel">API Mode</span>
           </label>
         </div>
-        
+
+        <div id="local-web-hint" class="info-hint hidden" data-i18n="localApiOnlyHint">I modelli locali supportano solo la modalità API.</div>
+
         <div class="form-group checkbox-group" id="autosubmit-container">
           <label class="checkbox-label">
-            <input type="checkbox" id="autosubmit-cb" checked>
-            <span class="checkbox-custom"></span>
-            Auto-submit (Web Mode)
+            <input type="checkbox" id="autosubmit-cb" class="sr-only" checked>
+            <span class="checkbox-custom" aria-hidden="true"></span>
+            <span data-i18n="autoSubmitLabel">Invio automatico (Web Mode)</span>
           </label>
+        </div>
+
+        <div id="api-model-bar" class="api-model-bar hidden">
+          <span id="api-model-badge" class="model-badge"></span>
+          <button id="configure-api-btn" type="button" class="btn action-btn" data-i18n="configureApiBtn">Configura</button>
         </div>
       </section>
 
-      <!-- Sezione 3: Azione e Output -->
+      <!-- Section 3: Action & Output -->
       <section class="section action-section">
-        <button id="submit-btn" class="btn massive-btn" data-i18n="submitBtn">Invia a LLM</button>
-        <button id="split-copy-btn" class="btn secondary hidden" style="margin-top: 8px; width: 100%;">Testo troppo lungo: Dividi e Copia (Chunk 1)</button>
-        
+        <div class="submit-row">
+          <button id="submit-btn" type="button" class="btn massive-btn" data-i18n="submitBtn">Invia a LLM</button>
+          <button id="stop-btn" type="button" class="btn danger-btn hidden" data-i18n="stopBtn">Stop</button>
+        </div>
+
+        <div id="split-copy-box" class="split-copy-box hidden">
+          <button id="split-copy-btn" type="button" class="btn secondary split-copy-btn"></button>
+          <div id="split-parts-row" class="split-parts-row"></div>
+        </div>
+
+        <div id="history-standalone-row" class="history-standalone-row hidden">
+          <button id="open-history-standalone-btn" type="button" class="btn action-btn small-btn"></button>
+        </div>
+
+        <div id="api-history-panel" class="history-panel hidden">
+          <div class="history-header">
+            <span data-i18n="historyTitle">Cronologia API</span>
+            <button id="clear-history-btn" type="button" class="btn text-btn small-btn" data-i18n="clearQueue">Svuota</button>
+          </div>
+          <div id="api-history-list" class="history-list"></div>
+        </div>
+
         <div id="api-output-container" class="output-container hidden">
           <div class="output-header">
-            <h3 data-i18n="apiOutputTitle">Risposta API</h3>
-            <button id="copy-output-btn" class="btn icon-btn" data-i18n="copyAll">Copia Tutto</button>
+            <h3 id="api-output-title" data-i18n="apiOutputTitle">Risposta API</h3>
+            <div class="output-actions">
+              <button id="history-toggle-btn" type="button" class="btn icon-btn hidden" data-i18n-title="historyTitle" title="Cronologia API">🕒</button>
+              <button id="copy-output-btn" type="button" class="btn icon-btn" data-i18n="copyAll">Copia</button>
+              <button id="download-md-btn" type="button" class="btn icon-btn" data-i18n-title="downloadMdTitle" title="Scarica Markdown">.md</button>
+              <button id="clear-output-btn" type="button" class="btn icon-btn" data-i18n="clearOutputBtn">Pulisci</button>
+            </div>
           </div>
-          <div id="api-output" class="markdown-body">
-            <!-- Render markdown qui -->
-          </div>
+          <div id="api-truncated-warning" class="truncated-warning hidden" data-i18n="outputTruncatedWarning">Attenzione: la risposta potrebbe essere troncata (limite massimo token in output raggiunto).</div>
+          <div id="api-output" class="markdown-body"></div>
         </div>
       </section>
     </main>
   </div>
-  
-  <script src="lib/marked.min.js"></script>
-  <script src="popup.js"></script>
+
+  <script type="module" src="popup.js"></script>
 </body>
 </html>

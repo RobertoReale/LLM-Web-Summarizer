@@ -1,0 +1,11 @@
+{
+  "name": "llm-web-summarizer",
+  "version": "2.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser extension to extract web content, queue snippets, and summarize via Web Mode or LLM APIs.",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "check": "node --check background.js && node --check popup.js && node --check options.js && node --check content_source.js && node --check content_target.js && node --check modules/config.js && node --check modules/llm-stream.js && node --check modules/markdown.js"
+  }
+}

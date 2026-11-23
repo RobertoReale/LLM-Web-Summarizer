@@ -1,585 +1,1387 @@
+// popup.js — Popup, Side Panel, and Full-Tab controller (ES Module)
+
+import {
+  PROVIDERS,
+  BUILTIN_PROMPT_IDS,
+  DEFAULT_CHUNK_CHARS,
+  getWebWarningLimitChars,
+  getDefaultPresetText,
+  resolveModel,
+  resolvePromptText,
+  normalizeQueue,
+  createQueueItem,
+  formatQueueForPrompt,
+  buildPayloads,
+  computeTextSignature,
+  splitTextIntoChunks,
+  buildSplitChunkPayload,
+} from './modules/config.js';
+import { renderMarkdown } from './modules/markdown.js';
+
+const t = (key, fallback = '') => {
+  try {
+    return chrome.i18n?.getMessage(key) || fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+function safeHostname(url) {
+  if (!url) return '';
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+}
+
+function slugifyFilename(raw) {
+  const clean = String(raw || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gi, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48);
+  const stamp = new Date().toISOString().slice(0, 10);
+  return `${clean || 'summary'}-${stamp}.md`;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
-  // --- i18n Localization ---
+  // --- View mode (popup | panel | tab) ---
+  const viewMode = new URLSearchParams(location.search).get('view') || 'popup';
+  if (viewMode === 'panel') document.body.classList.add('panel-mode');
+  else if (viewMode === 'tab') document.body.classList.add('tab-mode');
+
+  // Cache current windowId early so chrome.sidePanel.open() runs synchronously on click
+  let currentWindowId = null;
+  try {
+    const win = await chrome.windows?.getCurrent();
+    currentWindowId = win?.id ?? null;
+  } catch {
+    currentWindowId = null;
+  }
+
+  // --- Localization ---
   const localizeUI = () => {
-    document.querySelectorAll('[data-i18n]').forEach(el => {
-      const msg = chrome.i18n.getMessage(el.getAttribute('data-i18n'));
-      if (msg) {
-        // Special case for option elements inside select
-        if (el.tagName === 'OPTION') {
-          el.innerText = msg;
-        } else {
-          el.innerHTML = msg;
-        }
-      }
+    document.querySelectorAll('[data-i18n]').forEach((el) => {
+      const msg = t(el.getAttribute('data-i18n'));
+      if (msg) el.textContent = msg;
     });
-    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-      const msg = chrome.i18n.getMessage(el.getAttribute('data-i18n-placeholder'));
+    document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+      const msg = t(el.getAttribute('data-i18n-placeholder'));
       if (msg) el.setAttribute('placeholder', msg);
+    });
+    document.querySelectorAll('[data-i18n-title]').forEach((el) => {
+      const msg = t(el.getAttribute('data-i18n-title'));
+      if (msg) {
+        el.setAttribute('title', msg);
+        el.setAttribute('aria-label', msg);
+      }
     });
   };
   localizeUI();
 
   // --- Elements ---
+  const sidepanelBtn = document.getElementById('sidepanel-btn');
+  const optionsBtn = document.getElementById('options-btn');
   const themeToggleBtn = document.getElementById('theme-toggle-btn');
+  const statusBanner = document.getElementById('status-banner');
+
   const capturePageBtn = document.getElementById('capture-page-btn');
   const captureSelectionBtn = document.getElementById('capture-selection-btn');
   const clearQueueBtn = document.getElementById('clear-queue-btn');
   const viewQueueBtn = document.getElementById('view-queue-btn');
   const queueViewerContainer = document.getElementById('queue-viewer-container');
-  const queueEditor = document.getElementById('queue-editor');
-  
+  const queueItemsList = document.getElementById('queue-items-list');
+  const addManualItemBtn = document.getElementById('add-manual-item-btn');
+  const manualAddRow = document.getElementById('manual-add-row');
+  const manualItemInput = document.getElementById('manual-item-input');
+  const confirmManualItemBtn = document.getElementById('confirm-manual-item-btn');
+  const cancelManualItemBtn = document.getElementById('cancel-manual-item-btn');
   const queueCounter = document.getElementById('queue-counter');
+
   const lengthProgress = document.getElementById('length-progress');
   const lengthText = document.getElementById('length-text');
   const lengthWarning = document.getElementById('length-warning');
-  
+
   const promptType = document.getElementById('prompt-type');
+  const togglePromptEditorBtn = document.getElementById('toggle-prompt-editor-btn');
+  const outputLanguageSelect = document.getElementById('output-language');
   const customPromptContainer = document.getElementById('custom-prompt-container');
+  const promptModifiedBadge = document.getElementById('prompt-modified-badge');
   const customPrompt = document.getElementById('custom-prompt');
+  const promptNameRow = document.getElementById('prompt-name-row');
+  const promptNameInput = document.getElementById('prompt-name-input');
+  const confirmSavePromptBtn = document.getElementById('confirm-save-prompt-btn');
+  const cancelSavePromptBtn = document.getElementById('cancel-save-prompt-btn');
+  const updatePromptBtn = document.getElementById('update-prompt-btn');
+  const savePromptBtn = document.getElementById('save-prompt-btn');
+  const renamePromptBtn = document.getElementById('rename-prompt-btn');
+  const revertPromptBtn = document.getElementById('revert-prompt-btn');
+  const deletePromptBtn = document.getElementById('delete-prompt-btn');
+
   const targetLlm = document.getElementById('target-llm');
   const modeRadios = document.querySelectorAll('input[name="execution-mode"]');
+  const webModeRadio = document.querySelector('input[name="execution-mode"][value="web"]');
+  const apiModeRadio = document.querySelector('input[name="execution-mode"][value="api"]');
+  const webModeLabel = document.getElementById('web-mode-label');
+  const localWebHint = document.getElementById('local-web-hint');
   const autosubmitContainer = document.getElementById('autosubmit-container');
   const autosubmitCb = document.getElementById('autosubmit-cb');
-  
+  const apiModelBar = document.getElementById('api-model-bar');
+  const apiModelBadge = document.getElementById('api-model-badge');
+  const configureApiBtn = document.getElementById('configure-api-btn');
+
   const submitBtn = document.getElementById('submit-btn');
-  const apiOutputContainer = document.getElementById('api-output-container');
-  const apiOutput = document.getElementById('api-output');
-  const copyOutputBtn = document.getElementById('copy-output-btn');
-  const savePromptBtn = document.getElementById('save-prompt-btn');
-  const deletePromptBtn = document.getElementById('delete-prompt-btn');
+  const stopBtn = document.getElementById('stop-btn');
+  const splitCopyBox = document.getElementById('split-copy-box');
   const splitCopyBtn = document.getElementById('split-copy-btn');
+  const splitPartsRow = document.getElementById('split-parts-row');
+
+  const historyStandaloneRow = document.getElementById('history-standalone-row');
+  const openHistoryStandaloneBtn = document.getElementById('open-history-standalone-btn');
+  const apiHistoryPanel = document.getElementById('api-history-panel');
+  const apiHistoryList = document.getElementById('api-history-list');
+  const clearHistoryBtn = document.getElementById('clear-history-btn');
+
+  const apiOutputContainer = document.getElementById('api-output-container');
+  const apiOutputTitle = document.getElementById('api-output-title');
+  const historyToggleBtn = document.getElementById('history-toggle-btn');
+  const copyOutputBtn = document.getElementById('copy-output-btn');
+  const downloadMdBtn = document.getElementById('download-md-btn');
+  const clearOutputBtn = document.getElementById('clear-output-btn');
+  const apiTruncatedWarning = document.getElementById('api-truncated-warning');
+  const apiOutput = document.getElementById('api-output');
+
+  if (viewMode !== 'popup') {
+    sidepanelBtn.classList.add('hidden');
+  }
 
   // --- State ---
-  let state = {
+  const state = {
     textQueue: [],
     selectedPrompt: 'promptShort',
     customPromptText: '',
-    savedPrompts: [], // {id, name, text}
+    savedPrompts: [],
+    customPresetOverrides: {},
+    promptDraft: null, // { promptId: string, text: string } — non-destructive edit buffer
+    outputLanguage: 'auto',
     targetLLM: 'chatgpt',
     executionMode: 'web',
     isDarkMode: false,
-    autoSubmit: true
+    autoSubmit: true,
+    apiModels: {},
+    markdownOptions: { includeSourceMeta: true },
+    apiJob: null,
+    apiHistory: [],
+    splitProgress: null, // { signature: string, copiedIndices: number[], nextIndex: number }
   };
 
-  let splitState = {
-    chunks: [],
-    currentIndex: 0
-  };
+  let promptEditorExpanded = false;
+  let promptNameMode = 'new'; // 'new' | 'rename'
+  let editingQueueItemId = null;
+  let bannerTimer = null;
+  let pendingDeleteConfirm = false;
+  let deleteConfirmTimer = null;
+  let queueDirty = false;
+  let promptDirty = false;
+  let lastRenderedJobKey = '';
+  let cachedSplitChunks = [];
+  let cachedSplitSig = '';
 
-  try {
-    const res = await chrome.storage.local.get(null);
-    if (res.textQueue) state.textQueue = res.textQueue;
-    if (res.savedPrompts) state.savedPrompts = res.savedPrompts;
-    if (res.selectedPrompt) state.selectedPrompt = res.selectedPrompt;
-    if (res.customPromptText) state.customPromptText = res.customPromptText;
-    if (res.targetLLM) state.targetLLM = res.targetLLM;
-    if (res.executionMode) state.executionMode = res.executionMode;
-    if (res.autoSubmit !== undefined) state.autoSubmit = res.autoSubmit;
-    if (res.isDarkMode !== undefined) {
-      state.isDarkMode = res.isDarkMode;
-    } else {
-      // Default to white theme as requested
-      state.isDarkMode = false;
+  const showBanner = (message, kind = 'info', durationMs = 3500) => {
+    if (!message) {
+      statusBanner.classList.add('hidden');
+      return;
     }
-  } catch (e) {
-    console.error("Failed to load state", e);
+    statusBanner.textContent = message;
+    statusBanner.className = `status-banner ${kind}`;
+    clearTimeout(bannerTimer);
+    if (durationMs > 0) {
+      bannerTimer = setTimeout(() => {
+        statusBanner.classList.add('hidden');
+      }, durationMs);
+    }
+  };
+
+  const resetDeleteConfirm = () => {
+    pendingDeleteConfirm = false;
+    clearTimeout(deleteConfirmTimer);
+    deletePromptBtn.textContent = t('deletePromptBtn', 'Elimina');
+  };
+
+  const hidePromptNameRow = () => {
+    promptNameRow.classList.add('hidden');
+    promptNameInput.value = '';
+    promptNameMode = 'new';
+  };
+
+  const persistKeys = async (patch) => {
+    try {
+      await chrome.storage.local.set(patch);
+    } catch (err) {
+      console.error('Failed to persist state:', err);
+    }
+  };
+
+  const debounce = (fn, wait) => {
+    let timer;
+    return (...args) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn(...args), wait);
+    };
+  };
+
+  const flushQueueEditor = () => {
+    if (!queueDirty) return;
+    queueDirty = false;
+    persistKeys({ textQueue: state.textQueue });
+  };
+
+  const flushPromptEditor = () => {
+    if (!promptDirty) return;
+    promptDirty = false;
+    persistKeys({
+      customPromptText: state.customPromptText,
+      promptDraft: state.promptDraft,
+    });
+  };
+
+  const flushAllPending = () => {
+    flushQueueEditor();
+    flushPromptEditor();
+  };
+
+  const debouncedSaveQueue = debounce(flushQueueEditor, 300);
+  const debouncedSavePrompt = debounce(flushPromptEditor, 300);
+
+  // Flush BOTH queue & prompt editors when popup closes or blurs (Bug #5 fix!)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushAllPending();
+  });
+  window.addEventListener('pagehide', flushAllPending);
+
+  // --- Prompt Helpers ---
+  const getBasePromptText = (promptId = state.selectedPrompt) =>
+    resolvePromptText(
+      {
+        selectedPrompt: promptId,
+        customPromptText: state.customPromptText,
+        savedPrompts: state.savedPrompts,
+        customPresetOverrides: state.customPresetOverrides,
+      },
+      t
+    );
+
+  const hasActiveDraft = () =>
+    state.selectedPrompt !== 'custom' &&
+    state.promptDraft &&
+    state.promptDraft.promptId === state.selectedPrompt &&
+    state.promptDraft.text !== getBasePromptText(state.selectedPrompt);
+
+  const getEffectivePromptText = () => {
+    if (state.selectedPrompt === 'custom') {
+      return String(state.customPromptText || '').trim();
+    }
+    if (state.promptDraft && state.promptDraft.promptId === state.selectedPrompt) {
+      return String(state.promptDraft.text || '').trim();
+    }
+    return getBasePromptText(state.selectedPrompt);
+  };
+
+  const includeSourceMeta = () => state.markdownOptions?.includeSourceMeta !== false;
+
+  const getFormattedQueueText = () =>
+    formatQueueForPrompt(state.textQueue, { includeSourceMeta: includeSourceMeta() });
+
+  // --- Load Initial State ---
+  try {
+    const stored = await chrome.storage.local.get([
+      'textQueue',
+      'savedPrompts',
+      'customPresetOverrides',
+      'selectedPrompt',
+      'customPromptText',
+      'promptDraft',
+      'outputLanguage',
+      'targetLLM',
+      'executionMode',
+      'autoSubmit',
+      'isDarkMode',
+      'apiModels',
+      'markdownOptions',
+      'apiJob',
+      'apiHistory',
+      'splitProgress',
+    ]);
+
+    if (Array.isArray(stored.textQueue)) state.textQueue = normalizeQueue(stored.textQueue);
+    if (Array.isArray(stored.savedPrompts)) state.savedPrompts = stored.savedPrompts;
+    if (stored.customPresetOverrides && typeof stored.customPresetOverrides === 'object') {
+      state.customPresetOverrides = stored.customPresetOverrides;
+    }
+    if (stored.selectedPrompt) state.selectedPrompt = stored.selectedPrompt;
+    if (typeof stored.customPromptText === 'string') state.customPromptText = stored.customPromptText;
+    if (stored.promptDraft && typeof stored.promptDraft === 'object') state.promptDraft = stored.promptDraft;
+    if (typeof stored.outputLanguage === 'string' && stored.outputLanguage) {
+      state.outputLanguage = stored.outputLanguage;
+    }
+    if (stored.targetLLM && PROVIDERS[stored.targetLLM]) state.targetLLM = stored.targetLLM;
+    if (stored.executionMode === 'web' || stored.executionMode === 'api') state.executionMode = stored.executionMode;
+    if (stored.autoSubmit !== undefined) state.autoSubmit = Boolean(stored.autoSubmit);
+    if (stored.isDarkMode !== undefined) state.isDarkMode = Boolean(stored.isDarkMode);
+    if (stored.apiModels && typeof stored.apiModels === 'object') state.apiModels = stored.apiModels;
+    if (stored.markdownOptions && typeof stored.markdownOptions === 'object') {
+      state.markdownOptions = { includeSourceMeta: true, ...stored.markdownOptions };
+    }
+    if (stored.apiJob && typeof stored.apiJob === 'object') state.apiJob = stored.apiJob;
+    if (Array.isArray(stored.apiHistory)) state.apiHistory = stored.apiHistory;
+    if (stored.splitProgress && typeof stored.splitProgress === 'object') {
+      state.splitProgress = stored.splitProgress;
+    }
+  } catch (err) {
+    console.error('Failed to load state:', err);
   }
 
-  // --- Theme Management ---
+  const isValidPrompt = (val) =>
+    BUILTIN_PROMPT_IDS.includes(val) ||
+    val === 'custom' ||
+    state.savedPrompts.some((p) => p.id === val);
+  if (!isValidPrompt(state.selectedPrompt)) {
+    state.selectedPrompt = 'promptShort';
+  }
+  if (state.selectedPrompt === 'custom' || hasActiveDraft()) {
+    promptEditorExpanded = true;
+  }
+
+  if (!PROVIDERS[state.targetLLM]?.hasWebUI) {
+    state.executionMode = 'api';
+  }
+
+  // --- Theme & Navigation ---
   const applyTheme = (isDark) => {
-    if (isDark) {
-      document.body.classList.add('dark');
-      themeToggleBtn.innerText = '☀️';
-    } else {
-      document.body.classList.remove('dark');
-      themeToggleBtn.innerText = '🌙';
-    }
+    document.body.classList.toggle('dark', Boolean(isDark));
+    themeToggleBtn.textContent = isDark ? '☀️' : '🌙';
   };
   applyTheme(state.isDarkMode);
 
   themeToggleBtn.addEventListener('click', () => {
     state.isDarkMode = !state.isDarkMode;
     applyTheme(state.isDarkMode);
-    chrome.storage.local.set({ isDarkMode: state.isDarkMode });
+    persistKeys({ isDarkMode: state.isDarkMode });
   });
 
-  // --- Init UI ---
-  promptType.value = state.selectedPrompt;
-  customPrompt.value = state.customPromptText;
-  targetLlm.value = state.targetLLM;
-  const activeRadio = document.querySelector(`input[name="execution-mode"][value="${state.executionMode}"]`);
-  if (activeRadio) activeRadio.checked = true;
-  if (autosubmitCb) autosubmitCb.checked = state.autoSubmit;
+  const openOptions = () => chrome.runtime.openOptionsPage();
+  optionsBtn.addEventListener('click', openOptions);
+  configureApiBtn.addEventListener('click', openOptions);
 
-  const updateUI = () => {
-    // Populate dropdown with saved prompts
-    // Keep first 3 fixed (Short, Detailed, Custom), then add saved ones
-    while (promptType.options.length > 3) {
-      promptType.remove(3);
+  sidepanelBtn.addEventListener('click', () => {
+    flushAllPending();
+    if (chrome.sidePanel?.open && currentWindowId !== null) {
+      chrome.sidePanel
+        .open({ windowId: currentWindowId })
+        .then(() => window.close())
+        .catch(() => {
+          chrome.tabs.create({ url: chrome.runtime.getURL('popup.html?view=tab') });
+          window.close();
+        });
+    } else {
+      chrome.tabs.create({ url: chrome.runtime.getURL('popup.html?view=tab') });
+      window.close();
     }
-    state.savedPrompts.forEach(p => {
+  });
+
+  // --- Structured Queue Rendering ---
+  const renderQueueCards = () => {
+    queueItemsList.textContent = '';
+    if (state.textQueue.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'queue-empty-hint';
+      empty.textContent = t('queueEditorPlaceholder', 'Il testo in coda apparirà qui...');
+      queueItemsList.appendChild(empty);
+      return;
+    }
+
+    const kindLabels = {
+      page: t('queueKindPage', 'Pagina'),
+      selection: t('queueKindSelection', 'Selezione'),
+      manual: t('queueKindManual', 'Nota'),
+    };
+
+    state.textQueue.forEach((item, idx) => {
+      const card = document.createElement('div');
+      card.className = 'queue-card';
+      card.dataset.itemId = item.id;
+
+      const header = document.createElement('div');
+      header.className = 'queue-card-header';
+
+      const meta = document.createElement('div');
+      meta.className = 'queue-card-meta';
+
+      const titleRow = document.createElement('div');
+      titleRow.className = 'queue-card-title-row';
+
+      const badge = document.createElement('span');
+      badge.className = 'queue-kind-badge';
+      badge.textContent = kindLabels[item.kind] || kindLabels.manual;
+
+      const titleEl = document.createElement('span');
+      titleEl.className = 'queue-card-title';
+      const fallbackTitle = item.text.split('\n')[0].slice(0, 52);
+      titleEl.textContent = item.title || fallbackTitle || `#${idx + 1}`;
+      titleEl.title = item.title || item.text.slice(0, 140);
+
+      titleRow.appendChild(badge);
+      titleRow.appendChild(titleEl);
+
+      const sub = document.createElement('div');
+      sub.className = 'queue-card-sub';
+      const host = safeHostname(item.url);
+      const chars = `${item.text.length.toLocaleString()} ${t('charCount', 'Caratteri')}`;
+      sub.textContent = host ? `${host} · ${chars}` : chars;
+
+      meta.appendChild(titleRow);
+      meta.appendChild(sub);
+
+      const actions = document.createElement('div');
+      actions.className = 'queue-card-actions';
+
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'queue-card-btn edit';
+      editBtn.textContent = editingQueueItemId === item.id ? '✓' : '✎';
+      editBtn.title = t('editItemBtn', 'Modifica');
+      editBtn.setAttribute('aria-label', t('editItemBtn', 'Modifica'));
+      editBtn.addEventListener('click', () => {
+        flushQueueEditor();
+        editingQueueItemId = editingQueueItemId === item.id ? null : item.id;
+        renderQueueCards();
+      });
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'queue-card-btn remove';
+      removeBtn.textContent = '×';
+      removeBtn.title = t('removeItemBtn', 'Rimuovi');
+      removeBtn.setAttribute('aria-label', t('removeItemBtn', 'Rimuovi'));
+      removeBtn.addEventListener('click', () => {
+        flushQueueEditor();
+        state.textQueue = state.textQueue.filter((q) => q.id !== item.id);
+        if (editingQueueItemId === item.id) editingQueueItemId = null;
+        persistKeys({ textQueue: state.textQueue });
+        updateUI();
+      });
+
+      actions.appendChild(editBtn);
+      actions.appendChild(removeBtn);
+
+      header.appendChild(meta);
+      header.appendChild(actions);
+      card.appendChild(header);
+
+      if (editingQueueItemId === item.id) {
+        const editor = document.createElement('textarea');
+        editor.className = 'queue-item-editor';
+        editor.value = item.text;
+        editor.addEventListener('input', (e) => {
+          const target = state.textQueue.find((q) => q.id === item.id);
+          if (target) {
+            target.text = e.target.value;
+            queueDirty = true;
+            debouncedSaveQueue();
+            updateLengthAndSplitUI();
+          }
+        });
+        editor.addEventListener('blur', () => {
+          // Remove item only if explicitly emptied after blur
+          const target = state.textQueue.find((q) => q.id === item.id);
+          if (target && !target.text.trim()) {
+            state.textQueue = state.textQueue.filter((q) => q.id !== item.id);
+            editingQueueItemId = null;
+            queueDirty = false;
+            persistKeys({ textQueue: state.textQueue });
+            updateUI();
+          } else {
+            flushQueueEditor();
+          }
+        });
+        card.appendChild(editor);
+      }
+
+      queueItemsList.appendChild(card);
+    });
+  };
+
+  // --- API Output & History Rendering (Single render path — Bug #3 fixed!) ---
+  const renderHistoryUI = () => {
+    const count = state.apiHistory.length;
+    const hasOutput = !apiOutputContainer.classList.contains('hidden');
+
+    historyToggleBtn.classList.toggle('hidden', count === 0);
+    historyToggleBtn.textContent = count > 0 ? `🕒 ${count}` : '🕒';
+
+    historyStandaloneRow.classList.toggle('hidden', hasOutput || count === 0);
+    if (count > 0) {
+      openHistoryStandaloneBtn.textContent = `🕒 ${t('historyTitle', 'Cronologia API')} (${count})`;
+    }
+
+    if (count === 0) {
+      apiHistoryPanel.classList.add('hidden');
+      return;
+    }
+
+    apiHistoryList.textContent = '';
+    state.apiHistory.forEach((entry) => {
+      const row = document.createElement('div');
+      row.className = 'history-item';
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'history-item-btn';
+
+      const title = document.createElement('div');
+      title.className = 'history-item-title';
+      title.textContent = entry.title || entry.text.split('\n')[0].replace(/^#+\s*/, '').slice(0, 48) || entry.model;
+
+      const meta = document.createElement('div');
+      meta.className = 'history-item-meta';
+      const dateStr = entry.createdAt ? new Date(entry.createdAt).toLocaleString() : '';
+      meta.textContent = `${entry.model || entry.target} · ${dateStr}`;
+
+      btn.appendChild(title);
+      btn.appendChild(meta);
+      btn.addEventListener('click', () => {
+        const loadedJob = {
+          id: entry.id,
+          status: entry.status === 'aborted' ? 'aborted' : 'done',
+          target: entry.target,
+          model: entry.model,
+          title: entry.title || '',
+          text: entry.text,
+          error: '',
+          truncated: Boolean(entry.truncated),
+          startedAt: entry.createdAt,
+        };
+        apiHistoryPanel.classList.add('hidden');
+        persistKeys({ apiJob: loadedJob });
+        renderApiJob(loadedJob);
+      });
+
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'queue-card-btn remove';
+      delBtn.textContent = '×';
+      delBtn.title = t('removeItemBtn', 'Rimuovi');
+      delBtn.setAttribute('aria-label', t('removeItemBtn', 'Rimuovi'));
+      delBtn.addEventListener('click', () => {
+        state.apiHistory = state.apiHistory.filter((h) => h.id !== entry.id);
+        persistKeys({ apiHistory: state.apiHistory });
+        renderHistoryUI();
+      });
+
+      row.appendChild(btn);
+      row.appendChild(delBtn);
+      apiHistoryList.appendChild(row);
+    });
+  };
+
+  const renderApiJob = (job) => {
+    state.apiJob = job || null;
+    if (!job) {
+      lastRenderedJobKey = '';
+      apiOutputContainer.classList.add('hidden');
+      apiTruncatedWarning.classList.add('hidden');
+      stopBtn.classList.add('hidden');
+      submitBtn.disabled = false;
+      submitBtn.textContent = t('submitBtn', 'Invia a LLM');
+      renderHistoryUI();
+      return;
+    }
+
+    const renderKey = `${job.id}|${job.status}|${(job.text || '').length}|${job.error || ''}|${Boolean(job.truncated)}`;
+    if (renderKey === lastRenderedJobKey) return;
+    lastRenderedJobKey = renderKey;
+
+    apiOutputContainer.classList.remove('hidden');
+    const isStreaming = job.status === 'streaming';
+    stopBtn.classList.toggle('hidden', !isStreaming);
+    submitBtn.disabled = isStreaming;
+    submitBtn.textContent = isStreaming
+      ? t('apiStreamingBtn', 'Generazione in corso...')
+      : t('submitBtn', 'Invia a LLM');
+
+    const titleBase = t('apiOutputTitle', 'Risposta API');
+    apiOutputTitle.textContent = job.model ? `${titleBase} (${job.model})` : titleBase;
+    apiTruncatedWarning.classList.toggle('hidden', !job.truncated);
+    renderHistoryUI();
+
+    if (job.status === 'error') {
+      apiOutput.textContent = '';
+      if (job.text) {
+        const partial = document.createElement('div');
+        partial.innerHTML = renderMarkdown(job.text);
+        apiOutput.appendChild(partial);
+      }
+      const errDiv = document.createElement('div');
+      errDiv.className = 'output-error';
+      errDiv.textContent = `${t('errorPrefix', 'Errore:')} ${job.error || 'Unknown error'}`;
+      apiOutput.appendChild(errDiv);
+      return;
+    }
+
+    if (!job.text && isStreaming) {
+      apiOutput.textContent = '';
+      const loading = document.createElement('div');
+      loading.className = 'output-loading';
+      loading.textContent = t('apiProcessing', 'Elaborazione in corso...');
+      apiOutput.appendChild(loading);
+      return;
+    }
+
+    // Safe XSS-escaped Markdown rendering
+    apiOutput.innerHTML = renderMarkdown(job.text || '');
+    if (job.status === 'aborted') {
+      const note = document.createElement('div');
+      note.className = 'output-loading';
+      note.textContent = t('apiAbortedNotice', '[Generazione interrotta]');
+      apiOutput.appendChild(note);
+    }
+  };
+
+  // --- Persistent Split & Copy Helpers (Bug #1 fixed!) ---
+  const copySplitPartAt = async (index) => {
+    flushAllPending();
+    const fullText = getFormattedQueueText();
+    if (!fullText.trim()) return;
+
+    const maxCap = Math.min(getWebWarningLimitChars(state.targetLLM) - 1500, DEFAULT_CHUNK_CHARS);
+    const promptText = getEffectivePromptText();
+    const sig = computeTextSignature(`${fullText}|${promptText}|${state.targetLLM}|${state.outputLanguage}`);
+
+    if (cachedSplitSig !== sig || cachedSplitChunks.length === 0) {
+      cachedSplitChunks = splitTextIntoChunks(fullText, Math.max(8000, maxCap));
+      cachedSplitSig = sig;
+    }
+
+    const total = cachedSplitChunks.length;
+    if (total === 0 || index < 0 || index >= total) return;
+
+    const payload = buildSplitChunkPayload({
+      chunks: cachedSplitChunks,
+      index,
+      promptText,
+      outputLanguage: state.outputLanguage,
+      labels: {
+        intro: t('splitIntroPrefix', '').replace('{total}', String(total)) || undefined,
+        part: t('splitPartWord', 'PART'),
+        endMarker: t('splitEndMarker', 'END OF TEXT'),
+      },
+    });
+
+    try {
+      await navigator.clipboard.writeText(payload);
+    } catch {
+      showBanner(t('errClipboardWrite', 'Impossibile copiare negli appunti.'), 'error');
+      return;
+    }
+
+    const existing =
+      state.splitProgress && state.splitProgress.signature === sig
+        ? state.splitProgress
+        : { signature: sig, copiedIndices: [], nextIndex: 0 };
+
+    const copiedSet = new Set(Array.isArray(existing.copiedIndices) ? existing.copiedIndices : []);
+    copiedSet.add(index);
+    const nextIndex = index + 1 < total ? index + 1 : 0;
+
+    state.splitProgress = {
+      signature: sig,
+      copiedIndices: [...copiedSet].sort((a, b) => a - b),
+      nextIndex,
+    };
+    await persistKeys({ splitProgress: state.splitProgress });
+
+    if (copiedSet.size === total) {
+      showBanner(t('splitAllCopied', 'Tutte le parti copiate!'), 'success');
+    } else {
+      showBanner(`${t('splitCopiedNext', 'Copiata parte')} ${index + 1}/${total}`, 'success', 2000);
+    }
+    updateLengthAndSplitUI();
+  };
+
+  const updateLengthAndSplitUI = () => {
+    const fullText = getFormattedQueueText();
+    const charCount = fullText.length;
+    const tokenCount = Math.floor(charCount / 4);
+    const charMsg = t('charCount', 'Caratteri');
+    const tokenMsg = t('tokenCount', 'Token');
+    lengthText.textContent = `${charCount.toLocaleString()} ${charMsg} / ~${tokenCount.toLocaleString()} ${tokenMsg}`;
+
+    const maxWebChars = getWebWarningLimitChars(state.targetLLM);
+    const percentage = Math.min((charCount / maxWebChars) * 100, 100);
+    lengthProgress.style.width = `${percentage}%`;
+
+    const isOverWebLimit = charCount > maxWebChars && state.executionMode === 'web';
+    if (!isOverWebLimit) {
+      lengthProgress.style.backgroundColor = percentage > 80 ? 'var(--warning-color)' : 'var(--primary-color)';
+      lengthWarning.classList.add('hidden');
+      splitCopyBox.classList.add('hidden');
+      return;
+    }
+
+    lengthProgress.style.backgroundColor = 'var(--danger-color)';
+    lengthWarning.classList.remove('hidden');
+    splitCopyBox.classList.remove('hidden');
+
+    const promptText = getEffectivePromptText();
+    const sig = computeTextSignature(`${fullText}|${promptText}|${state.targetLLM}|${state.outputLanguage}`);
+    if (cachedSplitSig !== sig || cachedSplitChunks.length === 0) {
+      const maxCap = Math.min(maxWebChars - 1500, DEFAULT_CHUNK_CHARS);
+      cachedSplitChunks = splitTextIntoChunks(fullText, Math.max(8000, maxCap));
+      cachedSplitSig = sig;
+    }
+
+    const total = cachedSplitChunks.length;
+    const validProgress =
+      state.splitProgress && state.splitProgress.signature === sig
+        ? state.splitProgress
+        : { signature: sig, copiedIndices: [], nextIndex: 0 };
+
+    const copiedSet = new Set(Array.isArray(validProgress.copiedIndices) ? validProgress.copiedIndices : []);
+    const nextIdx =
+      Number.isInteger(validProgress.nextIndex) && validProgress.nextIndex >= 0 && validProgress.nextIndex < total
+        ? validProgress.nextIndex
+        : 0;
+
+    if (copiedSet.size === 0) {
+      splitCopyBtn.textContent = `${t('splitCopyStart', 'Testo lungo: Dividi e Copia (Parte 1)')} (${total})`;
+    } else if (copiedSet.size >= total) {
+      splitCopyBtn.textContent = t('splitAllCopied', 'Tutte le parti copiate! (Ricomincia)');
+    } else {
+      splitCopyBtn.textContent = `${t('splitNextPart', 'Copia parte')} ${nextIdx + 1}/${total}`;
+    }
+
+    splitPartsRow.textContent = '';
+    for (let i = 0; i < total; i++) {
+      const pill = document.createElement('button');
+      pill.type = 'button';
+      const isCopied = copiedSet.has(i);
+      const isNext = i === nextIdx && copiedSet.size < total;
+      pill.className = `split-part-pill${isCopied ? ' copied' : ''}${isNext ? ' next' : ''}`;
+      pill.textContent = isCopied ? `✓ ${i + 1}` : `${t('splitPartShort', 'P')}${i + 1}`;
+      pill.title = `${t('splitNextPart', 'Copia parte')} ${i + 1}/${total}`;
+      pill.addEventListener('click', () => copySplitPartAt(i));
+      splitPartsRow.appendChild(pill);
+    }
+  };
+
+  // --- Prompt UI Sync ---
+  const FIXED_PROMPT_OPTIONS_COUNT = 4; // Short, Detailed, KeyPoints, Custom
+
+  const updatePromptEditorUI = () => {
+    const isCustom = state.selectedPrompt === 'custom';
+    const isSaved = state.selectedPrompt.startsWith('saved_');
+    const isPreset = BUILTIN_PROMPT_IDS.includes(state.selectedPrompt);
+    const showEditor = isCustom || promptEditorExpanded;
+
+    togglePromptEditorBtn.classList.toggle('active', showEditor);
+    customPromptContainer.classList.toggle('hidden', !showEditor);
+
+    if (!showEditor) {
+      hidePromptNameRow();
+      resetDeleteConfirm();
+      return;
+    }
+
+    if (document.activeElement !== customPrompt) {
+      if (isCustom) {
+        customPrompt.value = state.customPromptText;
+      } else if (state.promptDraft && state.promptDraft.promptId === state.selectedPrompt) {
+        customPrompt.value = state.promptDraft.text;
+      } else {
+        customPrompt.value = getBasePromptText(state.selectedPrompt);
+      }
+    }
+
+    const modified = hasActiveDraft();
+    const hasPresetOverride = isPreset && Boolean(String(state.customPresetOverrides?.[state.selectedPrompt] || '').trim());
+
+    promptModifiedBadge.classList.toggle('hidden', !modified);
+    updatePromptBtn.classList.toggle('hidden', isCustom || !modified);
+    renamePromptBtn.classList.toggle('hidden', !isSaved);
+    revertPromptBtn.classList.toggle('hidden', isCustom || (!modified && !hasPresetOverride));
+    deletePromptBtn.classList.toggle('hidden', !isSaved);
+  };
+
+  // --- Main UI Sync ---
+  const updateUI = () => {
+    while (promptType.options.length > FIXED_PROMPT_OPTIONS_COUNT) {
+      promptType.remove(FIXED_PROMPT_OPTIONS_COUNT);
+    }
+    state.savedPrompts.forEach((p) => {
       const opt = document.createElement('option');
       opt.value = p.id;
-      opt.text = p.name;
+      opt.textContent = p.name;
       promptType.add(opt);
     });
     promptType.value = state.selectedPrompt;
+    outputLanguageSelect.value = state.outputLanguage;
 
-    // Prompt config
-    if (state.selectedPrompt === 'custom' || state.selectedPrompt.startsWith('saved_')) {
-      customPromptContainer.classList.remove('hidden');
-      if (state.selectedPrompt.startsWith('saved_')) {
-        const p = state.savedPrompts.find(x => x.id === state.selectedPrompt);
-        if (p) customPrompt.value = p.text;
-        deletePromptBtn.classList.remove('hidden');
-      } else {
-        customPrompt.value = state.customPromptText;
-        deletePromptBtn.classList.add('hidden');
-      }
-    } else {
-      customPromptContainer.classList.add('hidden');
+    updatePromptEditorUI();
+
+    targetLlm.value = state.targetLLM;
+    const supportsWeb = Boolean(PROVIDERS[state.targetLLM]?.hasWebUI);
+    webModeRadio.disabled = !supportsWeb;
+    webModeLabel.classList.toggle('disabled', !supportsWeb);
+    localWebHint.classList.toggle('hidden', supportsWeb);
+    if (!supportsWeb && state.executionMode === 'web') {
+      state.executionMode = 'api';
+    }
+    webModeRadio.checked = state.executionMode === 'web';
+    apiModeRadio.checked = state.executionMode === 'api';
+    autosubmitCb.checked = state.autoSubmit;
+
+    autosubmitContainer.classList.toggle('hidden', state.executionMode !== 'web');
+    apiModelBar.classList.toggle('hidden', state.executionMode !== 'api');
+    if (state.executionMode === 'api') {
+      const model = resolveModel(state.targetLLM, state.apiModels[state.targetLLM]);
+      apiModelBadge.textContent = `${t('activeModelPrefix', 'Modello:')} ${model}`;
     }
 
-    if (state.executionMode === 'web') {
-      autosubmitContainer.classList.remove('hidden');
-    } else {
-      autosubmitContainer.classList.add('hidden');
+    const countMsg = t('queueStatus', 'Elementi in coda: ');
+    queueCounter.textContent = `${countMsg}${state.textQueue.length}`;
+
+    if (
+      !queueViewerContainer.classList.contains('hidden') &&
+      !document.activeElement?.classList?.contains('queue-item-editor')
+    ) {
+      renderQueueCards();
     }
-
-    // Queue status
-    const countMsg = chrome.i18n.getMessage('queueStatus') || 'Elementi in coda: ';
-    queueCounter.innerText = `${countMsg}${state.textQueue.length}`;
-    
-    // Editor syncing
-    const fullText = state.textQueue.join('\n\n---\n\n');
-    if (document.activeElement !== queueEditor) {
-      queueEditor.value = fullText;
-    }
-
-    // Token math (approssimazione: 1 token = 4 caratteri)
-    const charCount = fullText.length;
-    const tokenCount = Math.floor(charCount / 4);
-    
-    const charMsg = chrome.i18n.getMessage('charCount') || 'Caratteri';
-    const tokenMsg = chrome.i18n.getMessage('tokenCount') || 'Token';
-    lengthText.innerText = `${charCount.toLocaleString()} ${charMsg} / ~${tokenCount.toLocaleString()} ${tokenMsg}`;
-
-    // Web mode limits warning (approx 12k tokens max for safety)
-    const MAX_TOKENS = 12000; 
-    const percentage = Math.min((tokenCount / MAX_TOKENS) * 100, 100);
-    lengthProgress.style.width = `${percentage}%`;
-
-    if (percentage > 80) {
-      lengthProgress.style.backgroundColor = 'var(--warning-color)';
-    } else {
-      lengthProgress.style.backgroundColor = 'var(--primary-color)';
-    }
-
-    if (tokenCount > MAX_TOKENS && state.executionMode === 'web') {
-      lengthWarning.classList.remove('hidden');
-      lengthProgress.style.backgroundColor = 'var(--danger-color)';
-      splitCopyBtn.classList.remove('hidden');
-      if (splitState.chunks.length === 0) {
-        splitCopyBtn.innerText = 'Testo troppo lungo: Dividi e Copia (Parte 1)';
-      }
-    } else {
-      lengthWarning.classList.add('hidden');
-      splitCopyBtn.classList.add('hidden');
-      splitState.chunks = [];
-      splitState.currentIndex = 0;
-    }
+    updateLengthAndSplitUI();
+    renderHistoryUI();
   };
+
   updateUI();
-
-  // Save state helper
-  const saveState = async () => {
-    await chrome.storage.local.set(state);
-    updateUI();
-  };
-
-  const debounce = (func, wait) => {
-    let timeout;
-    return (...args) => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => func(...args), wait);
-    };
-  };
-
-  const debouncedSaveState = debounce(saveState, 500);
-
-  // Listen to storage changes from background.js (e.g., Context Menus)
-  chrome.storage.onChanged.addListener((changes, namespace) => {
-    if (namespace === 'local' && changes.textQueue) {
-      state.textQueue = changes.textQueue.newValue || [];
-      updateUI();
+  if (state.apiJob?.status === 'streaming') {
+    try {
+      const rec = await chrome.runtime.sendMessage({ action: 'reconcileApiJob' });
+      if (rec?.ok) state.apiJob = rec.job;
+    } catch {
+      // ignore
     }
+  }
+  renderApiJob(state.apiJob);
+
+  // --- Live Storage Listener (single source of truth across popup, side panel, and options) ---
+  chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace !== 'local') return;
+    let needsUi = false;
+    if (changes.textQueue) {
+      state.textQueue = normalizeQueue(changes.textQueue.newValue);
+      needsUi = true;
+    }
+    if (changes.selectedPrompt) {
+      const next = changes.selectedPrompt.newValue;
+      if (isValidPrompt(next)) {
+        state.selectedPrompt = next;
+        needsUi = true;
+      }
+    }
+    if (changes.customPromptText && typeof changes.customPromptText.newValue === 'string') {
+      state.customPromptText = changes.customPromptText.newValue;
+      needsUi = true;
+    }
+    if (changes.promptDraft) {
+      state.promptDraft = changes.promptDraft.newValue || null;
+      needsUi = true;
+    }
+    if (changes.outputLanguage && typeof changes.outputLanguage.newValue === 'string') {
+      state.outputLanguage = changes.outputLanguage.newValue;
+      needsUi = true;
+    }
+    if (changes.targetLLM && PROVIDERS[changes.targetLLM.newValue]) {
+      state.targetLLM = changes.targetLLM.newValue;
+      needsUi = true;
+    }
+    if (changes.executionMode && (changes.executionMode.newValue === 'web' || changes.executionMode.newValue === 'api')) {
+      state.executionMode = changes.executionMode.newValue;
+      needsUi = true;
+    }
+    if (changes.autoSubmit) {
+      state.autoSubmit = Boolean(changes.autoSubmit.newValue);
+      needsUi = true;
+    }
+    if (changes.isDarkMode) {
+      state.isDarkMode = Boolean(changes.isDarkMode.newValue);
+      applyTheme(state.isDarkMode);
+    }
+    if (changes.apiModels) {
+      state.apiModels = changes.apiModels.newValue || {};
+      needsUi = true;
+    }
+    if (changes.markdownOptions) {
+      state.markdownOptions = { includeSourceMeta: true, ...(changes.markdownOptions.newValue || {}) };
+      needsUi = true;
+    }
+    if (changes.savedPrompts) {
+      state.savedPrompts = Array.isArray(changes.savedPrompts.newValue) ? changes.savedPrompts.newValue : [];
+      if (!isValidPrompt(state.selectedPrompt)) state.selectedPrompt = 'promptShort';
+      needsUi = true;
+    }
+    if (changes.customPresetOverrides) {
+      state.customPresetOverrides = changes.customPresetOverrides.newValue || {};
+      needsUi = true;
+    }
+    if (changes.splitProgress) {
+      state.splitProgress = changes.splitProgress.newValue || null;
+      needsUi = true;
+    }
+    if (changes.apiHistory) {
+      state.apiHistory = Array.isArray(changes.apiHistory.newValue) ? changes.apiHistory.newValue : [];
+      renderHistoryUI();
+    }
+    if (changes.apiJob) {
+      renderApiJob(changes.apiJob.newValue || null);
+    }
+    if (needsUi) updateUI();
   });
 
-  // --- UI Event Listeners ---
+  // --- Prompt Listeners (Non-destructive editing!) ---
   promptType.addEventListener('change', (e) => {
+    flushPromptEditor();
     state.selectedPrompt = e.target.value;
     if (state.selectedPrompt === 'custom') {
-      state.customPromptText = customPrompt.value;
+      promptEditorExpanded = true;
     }
-    saveState();
+    hidePromptNameRow();
+    resetDeleteConfirm();
+    persistKeys({ selectedPrompt: state.selectedPrompt });
+    updateUI();
+  });
+
+  togglePromptEditorBtn.addEventListener('click', () => {
+    if (state.selectedPrompt === 'custom') {
+      customPrompt.focus();
+      return;
+    }
+    promptEditorExpanded = !promptEditorExpanded;
+    updatePromptEditorUI();
+    if (promptEditorExpanded) customPrompt.focus();
+  });
+
+  outputLanguageSelect.addEventListener('change', (e) => {
+    state.outputLanguage = e.target.value;
+    persistKeys({ outputLanguage: state.outputLanguage });
+    updateLengthAndSplitUI();
   });
 
   customPrompt.addEventListener('input', (e) => {
+    const val = e.target.value;
     if (state.selectedPrompt === 'custom') {
-      state.customPromptText = e.target.value;
-    } else if (state.selectedPrompt.startsWith('saved_')) {
-      const p = state.savedPrompts.find(x => x.id === state.selectedPrompt);
-      if (p) p.text = e.target.value;
+      state.customPromptText = val;
+    } else {
+      const base = getBasePromptText(state.selectedPrompt);
+      state.promptDraft = val === base ? null : { promptId: state.selectedPrompt, text: val };
     }
-    debouncedSaveState();
+    promptDirty = true;
+    debouncedSavePrompt();
+    updatePromptEditorUI();
+    updateLengthAndSplitUI();
   });
 
+  customPrompt.addEventListener('blur', flushPromptEditor);
+
+  // Explicit Update of saved prompt OR preset override
+  updatePromptBtn.addEventListener('click', () => {
+    const text = customPrompt.value.trim();
+    if (!text) {
+      showBanner(t('promptEmptyError', 'Scrivi un prompt prima di salvarlo.'), 'warning');
+      return;
+    }
+    if (state.selectedPrompt.startsWith('saved_')) {
+      const found = state.savedPrompts.find((x) => x.id === state.selectedPrompt);
+      if (found) {
+        found.text = text;
+        state.promptDraft = null;
+        promptDirty = false;
+        persistKeys({ savedPrompts: state.savedPrompts, promptDraft: null });
+        updatePromptEditorUI();
+        showBanner(t('promptUpdatedMsg', 'Prompt aggiornato!'), 'success');
+      }
+      return;
+    }
+    if (BUILTIN_PROMPT_IDS.includes(state.selectedPrompt)) {
+      state.customPresetOverrides = { ...state.customPresetOverrides, [state.selectedPrompt]: text };
+      state.promptDraft = null;
+      promptDirty = false;
+      persistKeys({ customPresetOverrides: state.customPresetOverrides, promptDraft: null });
+      updatePromptEditorUI();
+      showBanner(t('promptUpdatedMsg', 'Prompt aggiornato!'), 'success');
+    }
+  });
+
+  // Save as new named prompt
   savePromptBtn.addEventListener('click', () => {
     const text = customPrompt.value.trim();
-    if (!text) return;
-    if (state.selectedPrompt === 'custom') {
-      const name = prompt("Nome del nuovo prompt:");
-      if (!name) return;
-      const newPrompt = { id: 'saved_' + Date.now(), name, text };
-      state.savedPrompts.push(newPrompt);
-      state.selectedPrompt = newPrompt.id;
-    } else if (state.selectedPrompt.startsWith('saved_')) {
-      const p = state.savedPrompts.find(x => x.id === state.selectedPrompt);
-      if (p) p.text = text;
-      alert("Prompt aggiornato!");
+    if (!text) {
+      showBanner(t('promptEmptyError', 'Scrivi un prompt prima di salvarlo.'), 'warning');
+      return;
     }
-    saveState();
+    promptNameMode = 'new';
+    promptNameInput.value = '';
+    promptNameRow.classList.remove('hidden');
+    promptNameInput.focus();
   });
+
+  // Rename existing saved prompt
+  renamePromptBtn.addEventListener('click', () => {
+    if (!state.selectedPrompt.startsWith('saved_')) return;
+    const found = state.savedPrompts.find((x) => x.id === state.selectedPrompt);
+    if (!found) return;
+    promptNameMode = 'rename';
+    promptNameInput.value = found.name;
+    promptNameRow.classList.remove('hidden');
+    promptNameInput.focus();
+    promptNameInput.select();
+  });
+
+  // Revert unsaved draft (or reset built-in preset back to default)
+  revertPromptBtn.addEventListener('click', () => {
+    if (hasActiveDraft()) {
+      state.promptDraft = null;
+      promptDirty = false;
+      persistKeys({ promptDraft: null });
+      customPrompt.value = getBasePromptText(state.selectedPrompt);
+      updatePromptEditorUI();
+      showBanner(t('promptRevertedMsg', 'Modifiche annullate.'), 'info');
+      return;
+    }
+    if (BUILTIN_PROMPT_IDS.includes(state.selectedPrompt) && state.customPresetOverrides[state.selectedPrompt]) {
+      const nextOverrides = { ...state.customPresetOverrides };
+      delete nextOverrides[state.selectedPrompt];
+      state.customPresetOverrides = nextOverrides;
+      persistKeys({ customPresetOverrides: nextOverrides });
+      customPrompt.value = getDefaultPresetText(state.selectedPrompt, t);
+      updatePromptEditorUI();
+      showBanner(t('presetRestoredMsg', 'Preset predefinito ripristinato.'), 'info');
+    }
+  });
+
+  const commitPromptName = () => {
+    const name = promptNameInput.value.trim();
+    if (!name) {
+      showBanner(t('promptNameRequired', 'Inserisci un nome per il prompt.'), 'warning');
+      promptNameInput.focus();
+      return;
+    }
+
+    if (promptNameMode === 'rename' && state.selectedPrompt.startsWith('saved_')) {
+      const found = state.savedPrompts.find((x) => x.id === state.selectedPrompt);
+      if (found) {
+        found.name = name;
+        hidePromptNameRow();
+        persistKeys({ savedPrompts: state.savedPrompts });
+        updateUI();
+        showBanner(t('promptRenamedMsg', 'Prompt rinominato!'), 'success');
+      }
+      return;
+    }
+
+    const text = customPrompt.value.trim();
+    if (!text) {
+      showBanner(t('promptEmptyError', 'Scrivi un prompt prima di salvarlo.'), 'warning');
+      return;
+    }
+    const newPrompt = { id: `saved_${Date.now()}`, name, text };
+    state.savedPrompts.push(newPrompt);
+    state.selectedPrompt = newPrompt.id;
+    state.promptDraft = null;
+    promptDirty = false;
+    hidePromptNameRow();
+    persistKeys({
+      savedPrompts: state.savedPrompts,
+      selectedPrompt: state.selectedPrompt,
+      promptDraft: null,
+    });
+    updateUI();
+    showBanner(t('promptSavedMsg', 'Prompt salvato!'), 'success');
+  };
+
+  confirmSavePromptBtn.addEventListener('click', commitPromptName);
+  promptNameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      commitPromptName();
+    } else if (e.key === 'Escape') {
+      hidePromptNameRow();
+    }
+  });
+  cancelSavePromptBtn.addEventListener('click', hidePromptNameRow);
 
   deletePromptBtn.addEventListener('click', () => {
-    if (state.selectedPrompt.startsWith('saved_') && confirm("Vuoi davvero eliminare questo prompt?")) {
-      state.savedPrompts = state.savedPrompts.filter(x => x.id !== state.selectedPrompt);
-      state.selectedPrompt = 'custom';
-      saveState();
+    if (!state.selectedPrompt.startsWith('saved_')) return;
+    if (!pendingDeleteConfirm) {
+      pendingDeleteConfirm = true;
+      deletePromptBtn.textContent = t('deletePromptConfirm', 'Conferma elimina?');
+      clearTimeout(deleteConfirmTimer);
+      deleteConfirmTimer = setTimeout(resetDeleteConfirm, 3500);
+      return;
     }
+    state.savedPrompts = state.savedPrompts.filter((x) => x.id !== state.selectedPrompt);
+    state.selectedPrompt = 'custom';
+    state.promptDraft = null;
+    resetDeleteConfirm();
+    persistKeys({
+      savedPrompts: state.savedPrompts,
+      selectedPrompt: state.selectedPrompt,
+      promptDraft: null,
+    });
+    updateUI();
+    showBanner(t('promptDeletedMsg', 'Prompt eliminato.'), 'info');
   });
 
+  // --- LLM / Mode Listeners ---
   targetLlm.addEventListener('change', (e) => {
     state.targetLLM = e.target.value;
-    saveState();
+    if (!PROVIDERS[state.targetLLM]?.hasWebUI) {
+      state.executionMode = 'api';
+    }
+    persistKeys({
+      targetLLM: state.targetLLM,
+      executionMode: state.executionMode,
+    });
+    updateUI();
   });
 
-  modeRadios.forEach(radio => {
+  modeRadios.forEach((radio) => {
     radio.addEventListener('change', (e) => {
+      if (e.target.disabled) return;
       state.executionMode = e.target.value;
-      saveState();
+      persistKeys({ executionMode: state.executionMode });
+      updateUI();
     });
   });
 
   autosubmitCb.addEventListener('change', (e) => {
     state.autoSubmit = e.target.checked;
-    saveState();
+    persistKeys({ autoSubmit: state.autoSubmit });
   });
 
-  // Queue Viewer
+  // --- Queue Listeners ---
   viewQueueBtn.addEventListener('click', () => {
     const isHidden = queueViewerContainer.classList.contains('hidden');
-    if (isHidden) {
-      queueViewerContainer.classList.remove('hidden');
-      viewQueueBtn.innerText = chrome.i18n.getMessage('hideQueue') || 'Nascondi';
-    } else {
-      queueViewerContainer.classList.add('hidden');
-      viewQueueBtn.innerText = chrome.i18n.getMessage('viewQueue') || 'Visualizza';
-    }
+    queueViewerContainer.classList.toggle('hidden', !isHidden);
+    viewQueueBtn.textContent = isHidden ? t('hideQueue', 'Nascondi') : t('viewQueue', 'Visualizza');
+    if (isHidden) renderQueueCards();
   });
 
-  queueEditor.addEventListener('input', (e) => {
-    // If the user edits manually, we flatten the queue to a single item
-    state.textQueue = e.target.value.trim() ? [e.target.value] : [];
-    debouncedSaveState();
+  addManualItemBtn.addEventListener('click', () => {
+    manualAddRow.classList.remove('hidden');
+    manualItemInput.focus();
+  });
+
+  cancelManualItemBtn.addEventListener('click', () => {
+    manualAddRow.classList.add('hidden');
+    manualItemInput.value = '';
+  });
+
+  confirmManualItemBtn.addEventListener('click', () => {
+    const text = manualItemInput.value.trim();
+    if (!text) return;
+    const item = createQueueItem({ text, kind: 'manual' });
+    if (item) {
+      state.textQueue = [...state.textQueue, item];
+      persistKeys({ textQueue: state.textQueue });
+      manualItemInput.value = '';
+      manualAddRow.classList.add('hidden');
+      updateUI();
+    }
   });
 
   clearQueueBtn.addEventListener('click', () => {
     state.textQueue = [];
-    saveState();
+    editingQueueItemId = null;
+    queueDirty = false;
+    persistKeys({ textQueue: [], splitProgress: null });
+    updateUI();
   });
 
-  // --- Capture helpers ---
-  const injectAndCall = async (method) => {
+  // --- Capture Actions ---
+  const captureFromActiveTab = async (method, btn) => {
+    const origText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = t('capturingBtn', 'Estrazione...');
     try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!tab) return;
-      
-      const check = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: () => ({
-          hasReadability: typeof Readability !== 'undefined',
-          hasTurndown: typeof TurndownService !== 'undefined',
-          hasContentSource: typeof window.__llm_summarizer_injected !== 'undefined'
-        })
-      });
-      
-      const status = check[0]?.result || {};
-      const filesToInject = [];
-      if (!status.hasReadability) filesToInject.push('lib/Readability.js');
-      if (!status.hasTurndown) filesToInject.push('lib/turndown.js');
-      if (!status.hasContentSource) filesToInject.push('content_source.js');
-
-      if (filesToInject.length > 0) {
-        await chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          files: filesToInject
-        });
+      const res = await chrome.runtime.sendMessage({ action: 'captureActiveTab', method });
+      if (res?.ok) {
+        const msg =
+          method === 'getSelection'
+            ? t('statusSelectionCaptured', 'Selezione aggiunta alla coda.')
+            : t('statusPageCaptured', 'Pagina aggiunta alla coda.');
+        showBanner(`${msg} (${res.charCount.toLocaleString()} ${t('charCount', 'caratteri')})`, 'success');
+      } else {
+        const codeMap = {
+          restrictedPage: t('errRestrictedPage', 'Impossibile estrarre testo da questa pagina interna del browser.'),
+          emptySelection: t('errEmptySelection', 'Nessun testo selezionato nella pagina corrente.'),
+          emptyPage: t('errEmptyPage', 'Nessun testo leggibile trovato nella pagina.'),
+          noActiveTab: t('errNoActiveTab', 'Nessuna scheda attiva trovata.'),
+        };
+        const msg = codeMap[res?.errorCode] || res?.error || t('errCaptureFailed', 'Estrazione non riuscita.');
+        showBanner(msg, 'warning', 4500);
       }
-      
-      const response = await chrome.tabs.sendMessage(tab.id, { action: method });
-      if (response && response.text) {
-        state.textQueue.push(response.text);
-        await saveState();
-      }
-    } catch (e) {
-      console.error("Injection failed", e);
+    } catch (err) {
+      showBanner(err?.message || t('errCaptureFailed', 'Estrazione non riuscita.'), 'error', 4500);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = origText;
     }
   };
 
-  capturePageBtn.addEventListener('click', () => injectAndCall('getPageText'));
-  captureSelectionBtn.addEventListener('click', () => injectAndCall('getSelection'));
+  capturePageBtn.addEventListener('click', () => captureFromActiveTab('getPageText', capturePageBtn));
+  captureSelectionBtn.addEventListener('click', () => captureFromActiveTab('getSelection', captureSelectionBtn));
 
-  // --- Split & Copy ---
+  // --- Split & Copy Button ---
   splitCopyBtn.addEventListener('click', () => {
-    if (splitState.chunks.length === 0) {
-      // Initialize chunks
-      const fullText = state.textQueue.join('\n\n---\n\n');
-      let promptValue = "";
-      if (state.selectedPrompt === 'custom') {
-        promptValue = state.customPromptText;
-      } else if (state.selectedPrompt.startsWith('saved_')) {
-        const p = state.savedPrompts.find(x => x.id === state.selectedPrompt);
-        promptValue = p ? p.text : "";
-      } else {
-        promptValue = chrome.i18n.getMessage(state.selectedPrompt) || state.selectedPrompt;
-      }
-      
-      const chunkSize = 35000; // approx characters
-      for (let i = 0; i < fullText.length; i += chunkSize) {
-        splitState.chunks.push(fullText.substring(i, i + chunkSize));
-      }
-      splitState.currentIndex = 0;
-    }
-
-    if (splitState.currentIndex < splitState.chunks.length) {
-      const isFirst = splitState.currentIndex === 0;
-      const isLast = splitState.currentIndex === splitState.chunks.length - 1;
-      
-      let payload = "";
-      if (isFirst) {
-        payload = `Questo testo è molto lungo, te lo invierò in ${splitState.chunks.length} parti. Non rispondere o riassumere finché non ti invio l'ultima parte scrivendo "FINE TESTO". Rispondi solo "Ok, attendo" a questa e alle prossime parti.\n\nEcco le istruzioni per quando avrai ricevuto tutto:\n${promptValue}\n\n--- PARTE 1 ---\n${splitState.chunks[splitState.currentIndex]}`;
-      } else if (isLast) {
-        payload = `--- PARTE ${splitState.currentIndex + 1} (FINE TESTO) ---\n${splitState.chunks[splitState.currentIndex]}`;
-      } else {
-        payload = `--- PARTE ${splitState.currentIndex + 1} ---\n${splitState.chunks[splitState.currentIndex]}`;
-      }
-
-      navigator.clipboard.writeText(payload);
-      splitState.currentIndex++;
-      
-      if (splitState.currentIndex < splitState.chunks.length) {
-        splitCopyBtn.innerText = `Copiata Parte ${splitState.currentIndex}. Clicca per copiare Parte ${splitState.currentIndex + 1}`;
-      } else {
-        splitCopyBtn.innerText = `Tutte le parti copiate! (Ricominicia)`;
-        splitState.chunks = [];
-        splitState.currentIndex = 0;
-      }
-    }
+    const fullText = getFormattedQueueText();
+    const promptText = getEffectivePromptText();
+    const sig = computeTextSignature(`${fullText}|${promptText}|${state.targetLLM}|${state.outputLanguage}`);
+    const nextIdx =
+      state.splitProgress && state.splitProgress.signature === sig && Number.isInteger(state.splitProgress.nextIndex)
+        ? state.splitProgress.nextIndex
+        : 0;
+    copySplitPartAt(nextIdx);
   });
 
-  // --- Submit ---
+  // --- Submit / Stop ---
   submitBtn.addEventListener('click', async () => {
+    flushAllPending();
     if (state.textQueue.length === 0) {
-      alert(chrome.i18n.getMessage('queueEmpty') || "La coda è vuota. Cattura del testo prima di inviare.");
+      showBanner(t('queueEmpty', 'La coda è vuota. Cattura del testo prima di inviare.'), 'warning');
       return;
     }
 
-    const fullText = state.textQueue.join('\n\n---\n\n');
-    let promptValue = "";
-    if (state.selectedPrompt === 'custom') {
-      promptValue = state.customPromptText;
-    } else if (state.selectedPrompt.startsWith('saved_')) {
-      const p = state.savedPrompts.find(x => x.id === state.selectedPrompt);
-      promptValue = p ? p.text : "";
-    } else {
-      promptValue = chrome.i18n.getMessage(state.selectedPrompt) || state.selectedPrompt;
+    const promptText = getEffectivePromptText();
+    if (!promptText) {
+      showBanner(t('promptEmptyError', 'Scrivi un prompt prima di inviare.'), 'warning');
+      return;
     }
-    
-    const textLabel = chrome.i18n.getMessage('textLabel') || "Testo:";
-    const finalPayload = `${promptValue}\n\n${textLabel}\n${fullText}`;
+
+    const fullText = getFormattedQueueText();
+    const textLabel = t('textLabel', 'Testo:');
+    const { webPayload, systemPrompt, userPrompt } = buildPayloads({
+      promptText,
+      contentText: fullText,
+      outputLanguage: state.outputLanguage,
+      textLabel,
+    });
 
     if (state.executionMode === 'web') {
-      submitBtn.textContent = chrome.i18n.getMessage('submitBtnLoading') || 'Apertura Web Mode...';
-      submitBtn.disabled = true;
-      chrome.runtime.sendMessage({ action: 'triggerWebMode', payload: finalPayload, target: state.targetLLM, autoSubmit: state.autoSubmit });
-      setTimeout(() => window.close(), 1000);
-    } else {
-      // API Mode 
-      apiOutputContainer.classList.remove('hidden');
-      apiOutput.innerHTML = "<em>Elaborazione in corso...</em>";
-      submitBtn.disabled = true;
-
-      try {
-        const data = await chrome.storage.local.get('apiKeys');
-        const apiKeys = data.apiKeys || {};
-        
-        let responseText = "";
-
-        const renderStream = async (reader, decoder, processChunk) => {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            const chunk = decoder.decode(value, { stream: true });
-            responseText += processChunk(chunk);
-            if (typeof marked !== 'undefined') {
-              apiOutput.innerHTML = marked.parse(responseText);
-            } else {
-              apiOutput.innerText = responseText;
-            }
-          }
-        };
-
-        if (state.targetLLM === 'chatgpt') {
-          if (!apiKeys.openai) throw new Error("API Key OpenAI mancante. Configurala nelle Opzioni.");
-          const res = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${apiKeys.openai}`
-            },
-            body: JSON.stringify({
-              model: 'gpt-3.5-turbo',
-              messages: [{ role: 'user', content: finalPayload }],
-              stream: true
-            })
-          });
-          if (!res.ok) throw new Error("Errore API OpenAI");
-          const reader = res.body.getReader();
-          const decoder = new TextDecoder("utf-8");
-          await renderStream(reader, decoder, (chunk) => {
-            let addedText = "";
-            const lines = chunk.split('\n');
-            for (const line of lines) {
-              if (line.startsWith('data: ') && line.trim() !== 'data: [DONE]') {
-                try {
-                  const data = JSON.parse(line.substring(6));
-                  if (data.choices[0].delta.content) {
-                    addedText += data.choices[0].delta.content;
-                  }
-                } catch(e) {}
-              }
-            }
-            return addedText;
-          });
-        } else if (state.targetLLM === 'claude') {
-          if (!apiKeys.anthropic) throw new Error("API Key Anthropic mancante. Configurala nelle Opzioni.");
-          const res = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-api-key': apiKeys.anthropic,
-              'anthropic-version': '2023-06-01',
-              'anthropic-dangerously-allow-browser': 'true'
-            },
-            body: JSON.stringify({
-              model: 'claude-3-haiku-20240307',
-              max_tokens: 1024,
-              messages: [{ role: 'user', content: finalPayload }],
-              stream: true
-            })
-          });
-          if (!res.ok) throw new Error("Errore API Anthropic");
-          const reader = res.body.getReader();
-          const decoder = new TextDecoder("utf-8");
-          await renderStream(reader, decoder, (chunk) => {
-            let addedText = "";
-            const lines = chunk.split('\n');
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                try {
-                  const data = JSON.parse(line.substring(6));
-                  if (data.type === 'content_block_delta' && data.delta.text) {
-                    addedText += data.delta.text;
-                  }
-                } catch(e) {}
-              }
-            }
-            return addedText;
-          });
-        } else if (state.targetLLM === 'gemini') {
-          if (!apiKeys.gemini) throw new Error("API Key Gemini mancante. Configurala nelle Opzioni.");
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=${apiKeys.gemini}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: finalPayload }] }]
-            })
-          });
-          if (!res.ok) throw new Error("Errore API Gemini");
-          const reader = res.body.getReader();
-          const decoder = new TextDecoder("utf-8");
-          await renderStream(reader, decoder, (chunk) => {
-            let addedText = "";
-            const lines = chunk.split('\n');
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                try {
-                  const data = JSON.parse(line.substring(6));
-                  if (data.candidates && data.candidates[0].content.parts[0].text) {
-                    addedText += data.candidates[0].content.parts[0].text;
-                  }
-                } catch(e) {}
-              }
-            }
-            return addedText;
-          });
-        } else if (state.targetLLM === 'local') {
-          const url = apiKeys.localUrl || 'http://localhost:11434/api/generate';
-          // Se usa LM Studio /v1/chat/completions, usa il formato OpenAI
-          const isLMApi = url.includes('/v1/chat/completions');
-          const payload = isLMApi 
-            ? { messages: [{ role: 'user', content: finalPayload }], stream: true }
-            : { model: 'llama3', prompt: finalPayload, stream: true }; // Formato Ollama di default
-            
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-          if (!res.ok) throw new Error("Errore chiamata Local LLM");
-          const reader = res.body.getReader();
-          const decoder = new TextDecoder("utf-8");
-          await renderStream(reader, decoder, (chunk) => {
-            let addedText = "";
-            const lines = chunk.split('\n');
-            for (const line of lines) {
-              const cleanedLine = line.startsWith('data: ') ? line.substring(6) : line;
-              if (cleanedLine.trim() && cleanedLine.trim() !== '[DONE]') {
-                try {
-                  const data = JSON.parse(cleanedLine);
-                  if (data.response) addedText += data.response; // Ollama
-                  if (data.choices && data.choices[0].delta && data.choices[0].delta.content) addedText += data.choices[0].delta.content; // LM Studio
-                } catch(e) {}
-              }
-            }
-            return addedText;
-          });
-        } else {
-          throw new Error("L'integrazione API per " + state.targetLLM + " non è supportata in questa versione.");
-        }
-      } catch (err) {
-        apiOutput.innerHTML = `<span style="color: red;">Errore: ${err.message}</span>`;
-      } finally {
-        submitBtn.disabled = false;
+      if (!PROVIDERS[state.targetLLM]?.hasWebUI) {
+        showBanner(t('localApiOnlyHint', 'I modelli locali supportano solo la modalità API.'), 'warning');
+        return;
       }
+      submitBtn.textContent = t('submitBtnLoading', 'Apertura Web Mode...');
+      submitBtn.disabled = true;
+      const res = await chrome.runtime.sendMessage({
+        action: 'triggerWebMode',
+        payload: webPayload,
+        target: state.targetLLM,
+        autoSubmit: state.autoSubmit,
+      });
+      if (res?.ok) {
+        if (state.markdownOptions?.autoClearQueue) {
+          state.textQueue = [];
+          await persistKeys({ textQueue: [], splitProgress: null });
+        }
+        if (viewMode === 'popup') {
+          setTimeout(() => window.close(), 600);
+        } else {
+          submitBtn.disabled = false;
+          submitBtn.textContent = t('submitBtn', 'Invia a LLM');
+        }
+      } else {
+        submitBtn.disabled = false;
+        submitBtn.textContent = t('submitBtn', 'Invia a LLM');
+        showBanner(res?.error || t('errWebModeFailed', 'Impossibile avviare la Web Mode.'), 'error');
+      }
+      return;
+    }
+
+    // API Mode (system/user separation, runs in background.js)
+    const primaryTitle = state.textQueue[0]?.title || state.textQueue[0]?.text.split('\n')[0].slice(0, 60) || '';
+    submitBtn.disabled = true;
+    const res = await chrome.runtime.sendMessage({
+      action: 'startApiSummary',
+      systemPrompt,
+      userPrompt,
+      target: state.targetLLM,
+      title: primaryTitle,
+    });
+    if (res?.ok && res.job) {
+      renderApiJob(res.job);
+      if (state.markdownOptions?.autoClearQueue) {
+        state.textQueue = [];
+        await persistKeys({ textQueue: [], splitProgress: null });
+        updateUI();
+      }
+    } else {
+      submitBtn.disabled = false;
+      showBanner(res?.error || t('errorPrefix', 'Errore'), 'error');
     }
   });
 
-  copyOutputBtn.addEventListener('click', () => {
-    navigator.clipboard.writeText(apiOutput.innerText);
-    const origText = copyOutputBtn.innerText;
-    copyOutputBtn.innerText = 'Copiato!';
-    setTimeout(() => copyOutputBtn.innerText = origText, 2000);
+  stopBtn.addEventListener('click', async () => {
+    await chrome.runtime.sendMessage({ action: 'cancelApiSummary' });
+  });
+
+  // --- Output & History Actions ---
+  const toggleHistoryPanel = () => {
+    apiHistoryPanel.classList.toggle('hidden');
+    if (!apiHistoryPanel.classList.contains('hidden')) renderHistoryUI();
+  };
+  historyToggleBtn.addEventListener('click', toggleHistoryPanel);
+  openHistoryStandaloneBtn.addEventListener('click', toggleHistoryPanel);
+
+  clearHistoryBtn.addEventListener('click', () => {
+    state.apiHistory = [];
+    apiHistoryPanel.classList.add('hidden');
+    persistKeys({ apiHistory: [] });
+    renderHistoryUI();
+  });
+
+  copyOutputBtn.addEventListener('click', async () => {
+    const raw = state.apiJob?.text || apiOutput.innerText || '';
+    if (!raw.trim()) return;
+    try {
+      await navigator.clipboard.writeText(raw);
+      const orig = copyOutputBtn.textContent;
+      copyOutputBtn.textContent = t('copiedLabel', 'Copiato!');
+      setTimeout(() => {
+        copyOutputBtn.textContent = orig;
+      }, 1800);
+    } catch {
+      showBanner(t('errClipboardWrite', 'Impossibile copiare negli appunti.'), 'error');
+    }
+  });
+
+  downloadMdBtn.addEventListener('click', () => {
+    const raw = state.apiJob?.text || '';
+    if (!raw.trim()) return;
+    const filename = slugifyFilename(state.apiJob?.title);
+    const blob = new Blob([raw], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showBanner(`${t('downloadedMdMsg', 'Scaricato:')} ${filename}`, 'success', 2200);
+  });
+
+  clearOutputBtn.addEventListener('click', async () => {
+    await chrome.runtime.sendMessage({ action: 'clearApiJob' });
+    renderApiJob(null);
   });
 });

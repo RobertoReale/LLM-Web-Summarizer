@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extensionName__",
-  "version": "1.0.0",
+  "version": "2.1.0",
   "description": "__MSG_extensionDesc__",
   "default_locale": "it",
   "icons": {
-    "16": "logo.png",
-    "48": "logo.png",
-    "128": "logo.png"
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
   },
   "permissions": [
     "activeTab",
@@ -15,24 +16,71 @@
     "storage",
     "contextMenus",
     "clipboardWrite",
-    "clipboardRead"
+    "sidePanel"
   ],
   "host_permissions": [
-    "*://*/*"
+    "https://chatgpt.com/*",
+    "https://claude.ai/*",
+    "https://gemini.google.com/*",
+    "https://www.perplexity.ai/*",
+    "https://perplexity.ai/*",
+    "https://api.openai.com/*",
+    "https://api.anthropic.com/*",
+    "https://generativelanguage.googleapis.com/*",
+    "https://api.perplexity.ai/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
+  ],
+  "optional_host_permissions": [
+    "http://*/*",
+    "https://*/*"
   ],
   "browser_specific_settings": {
     "gecko": {
       "id": "llm-web-summarizer@robertoreale.net",
-      "strict_min_version": "109.0"
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": [
+          "websiteContent"
+        ],
+        "optional": []
+      }
     }
   },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "scripts": [
+      "background.js"
+    ],
+    "type": "module"
   },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://claude.ai/*",
+        "https://gemini.google.com/*",
+        "https://www.perplexity.ai/*",
+        "https://perplexity.ai/*"
+      ],
+      "js": [
+        "content_target.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
   "action": {
     "default_popup": "popup.html",
-    "default_icon": "logo.png",
-    "default_title": "LLM Web-Summarizer"
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    },
+    "default_title": "__MSG_extensionName__"
+  },
+  "side_panel": {
+    "default_path": "popup.html?view=panel"
   },
   "commands": {
     "add-to-queue": {
@@ -40,7 +88,7 @@
         "default": "Alt+S",
         "mac": "MacCtrl+S"
       },
-      "description": "Aggiungi testo alla coda"
+      "description": "__MSG_commandAddToQueue__"
     }
   },
   "options_ui": {

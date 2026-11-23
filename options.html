@@ -3,99 +3,247 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Opzioni - LLM Web-Summarizer</title>
+  <title data-i18n="optionsPageTitle">Opzioni - LLM Web-Summarizer</title>
   <link rel="stylesheet" href="options.css">
 </head>
 <body>
   <div class="options-container">
-    <header>
-      <h1>Configurazione LLM Web-Summarizer</h1>
+    <header class="options-header">
+      <h1 data-i18n="optionsHeading">Configurazione LLM Web-Summarizer</h1>
+      <button id="theme-toggle-btn" type="button" class="theme-btn" data-i18n-title="toggleTheme" title="Cambia tema" aria-label="Cambia tema">🌙</button>
     </header>
-    
+
     <main>
+      <!-- Card 1: API Keys, Models & Connection Test -->
       <section class="card">
-        <h2>Chiavi API (API Mode)</h2>
-        <p class="description">Inserisci le chiavi API per utilizzare la modalità API diretta (senza aprire nuove tab).</p>
-        
-        <div class="form-group">
-          <label for="openai-key">OpenAI API Key (ChatGPT)</label>
-          <input type="password" id="openai-key" placeholder="sk-...">
+        <div class="card-header">
+          <h2 data-i18n="optionsApiSection">Chiavi API e Modelli (API Mode)</h2>
+          <button id="reset-models-btn" type="button" class="btn secondary small-btn" data-i18n="resetDefaultsBtn">Ripristina default</button>
         </div>
-        
-        <div class="form-group">
-          <label for="anthropic-key">Anthropic API Key (Claude)</label>
-          <input type="password" id="anthropic-key" placeholder="sk-ant-...">
+        <p class="description" data-i18n="optionsApiDesc">Inserisci le chiavi API e i modelli desiderati per usare la modalità API diretta. Puoi digitare qualsiasi ID modello valido.</p>
+        <p class="privacy-note" data-i18n="optionsPrivacyNote">Le chiavi API sono salvate esclusivamente in locale sul tuo dispositivo e inviate solo al provider selezionato.</p>
+
+        <div class="provider-rows">
+          <!-- OpenAI -->
+          <div class="provider-row">
+            <div class="form-group">
+              <label for="openai-key">OpenAI API Key (ChatGPT)</label>
+              <div class="secret-wrap">
+                <input type="password" id="openai-key" autocomplete="off" placeholder="sk-...">
+                <button type="button" class="toggle-secret-btn" data-target="openai-key" data-i18n-title="toggleSecretTitle" title="Mostra / nascondi">👁️</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="openai-model" data-i18n="modelLabel">Modello</label>
+              <input type="text" id="openai-model" list="openai-models">
+              <datalist id="openai-models"></datalist>
+            </div>
+            <div class="test-col">
+              <button type="button" class="btn secondary small-btn test-conn-btn" data-provider="chatgpt" data-i18n="testConnBtn">Test</button>
+            </div>
+            <div class="test-status hidden" id="test-status-chatgpt" role="status" aria-live="polite"></div>
+          </div>
+
+          <!-- Anthropic -->
+          <div class="provider-row">
+            <div class="form-group">
+              <label for="anthropic-key">Anthropic API Key (Claude)</label>
+              <div class="secret-wrap">
+                <input type="password" id="anthropic-key" autocomplete="off" placeholder="sk-ant-...">
+                <button type="button" class="toggle-secret-btn" data-target="anthropic-key" data-i18n-title="toggleSecretTitle" title="Mostra / nascondi">👁️</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="anthropic-model" data-i18n="modelLabel">Modello</label>
+              <input type="text" id="anthropic-model" list="anthropic-models">
+              <datalist id="anthropic-models"></datalist>
+            </div>
+            <div class="test-col">
+              <button type="button" class="btn secondary small-btn test-conn-btn" data-provider="claude" data-i18n="testConnBtn">Test</button>
+            </div>
+            <div class="test-status hidden" id="test-status-claude" role="status" aria-live="polite"></div>
+          </div>
+
+          <!-- Gemini -->
+          <div class="provider-row">
+            <div class="form-group">
+              <label for="gemini-key">Google Gemini API Key</label>
+              <div class="secret-wrap">
+                <input type="password" id="gemini-key" autocomplete="off" placeholder="AIza...">
+                <button type="button" class="toggle-secret-btn" data-target="gemini-key" data-i18n-title="toggleSecretTitle" title="Mostra / nascondi">👁️</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="gemini-model" data-i18n="modelLabel">Modello</label>
+              <input type="text" id="gemini-model" list="gemini-models">
+              <datalist id="gemini-models"></datalist>
+            </div>
+            <div class="test-col">
+              <button type="button" class="btn secondary small-btn test-conn-btn" data-provider="gemini" data-i18n="testConnBtn">Test</button>
+            </div>
+            <div class="test-status hidden" id="test-status-gemini" role="status" aria-live="polite"></div>
+          </div>
+
+          <!-- Perplexity -->
+          <div class="provider-row">
+            <div class="form-group">
+              <label for="perplexity-key">Perplexity API Key</label>
+              <div class="secret-wrap">
+                <input type="password" id="perplexity-key" autocomplete="off" placeholder="pplx-...">
+                <button type="button" class="toggle-secret-btn" data-target="perplexity-key" data-i18n-title="toggleSecretTitle" title="Mostra / nascondi">👁️</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="perplexity-model" data-i18n="modelLabel">Modello</label>
+              <input type="text" id="perplexity-model" list="perplexity-models">
+              <datalist id="perplexity-models"></datalist>
+            </div>
+            <div class="test-col">
+              <button type="button" class="btn secondary small-btn test-conn-btn" data-provider="perplexity" data-i18n="testConnBtn">Test</button>
+            </div>
+            <div class="test-status hidden" id="test-status-perplexity" role="status" aria-live="polite"></div>
+          </div>
         </div>
-        
-        <div class="form-group">
-          <label for="gemini-key">Google Gemini API Key</label>
-          <input type="password" id="gemini-key" placeholder="AIza...">
+
+        <hr class="divider">
+
+        <div class="provider-row">
+          <div class="form-group">
+            <label for="local-url" data-i18n="localUrlLabel">URL Locale (Ollama / LM Studio)</label>
+            <input type="text" id="local-url" placeholder="http://localhost:11434/api/generate">
+          </div>
+          <div class="form-group">
+            <label for="local-model" data-i18n="localModelLabel">Modello Locale</label>
+            <input type="text" id="local-model" list="local-models">
+            <datalist id="local-models"></datalist>
+          </div>
+          <div class="test-col">
+            <button type="button" class="btn secondary small-btn test-conn-btn" data-provider="local" data-i18n="testConnBtn">Test</button>
+          </div>
+          <div class="test-status hidden" id="test-status-local" role="status" aria-live="polite"></div>
         </div>
-        
-        <div class="form-group">
-          <label for="local-url">URL Locale (Ollama / LM Studio)</label>
-          <input type="text" id="local-url" placeholder="http://localhost:11434/api/generate">
+
+        <div class="form-group local-key-group">
+          <label for="local-key" data-i18n="localKeyLabel">API Key Locale / Custom (opzionale)</label>
+          <div class="secret-wrap">
+            <input type="password" id="local-key" autocomplete="off" placeholder="Bearer token (opzionale)">
+            <button type="button" class="toggle-secret-btn" data-target="local-key" data-i18n-title="toggleSecretTitle" title="Mostra / nascondi">👁️</button>
+          </div>
         </div>
       </section>
-      
+
+      <!-- Card 2: Prompt Manager -->
       <section class="card">
-        <h2>Selettori CSS Avanzati (Web Mode)</h2>
-        <p class="description">Se i siti degli LLM aggiornano la loro interfaccia e l'estensione non riesce più ad incollare il testo, puoi aggiornare qui i selettori CSS della casella di input.</p>
-        
+        <div class="card-header">
+          <h2 data-i18n="optionsPromptsSection">Gestione Prompt</h2>
+          <button id="reset-presets-btn" type="button" class="btn secondary small-btn" data-i18n="resetPresetsBtn">Ripristina preset</button>
+        </div>
+        <p class="description" data-i18n="optionsPromptsDesc">Visualizza o personalizza i prompt predefiniti e gestisci i tuoi template salvati. Puoi usare opzionalmente {{text}} per decidere dove inserire il testo estratto.</p>
+
+        <h3 class="sub-heading" data-i18n="builtinPresetsHeading">Preset Predefiniti</h3>
+        <div class="preset-grid">
+          <div class="form-group">
+            <label for="preset-short" data-i18n="promptShort">Riassunto Corto</label>
+            <textarea id="preset-short" rows="2"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="preset-detailed" data-i18n="promptDetailed">Riassunto Dettagliato</label>
+            <textarea id="preset-detailed" rows="2"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="preset-keypoints" data-i18n="promptKeyPoints">Punti Chiave</label>
+            <textarea id="preset-keypoints" rows="2"></textarea>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <h3 class="sub-heading" data-i18n="savedPromptsHeading">Prompt Personalizzati Salvati</h3>
+        <div id="saved-prompts-list" class="saved-prompts-list"></div>
+
+        <div class="new-prompt-box">
+          <div class="new-prompt-row">
+            <input type="text" id="new-prompt-name" data-i18n-placeholder="promptNamePlaceholder" placeholder="Nome del nuovo prompt...">
+            <button id="add-saved-prompt-btn" type="button" class="btn secondary small-btn" data-i18n="addPromptBtn">+ Aggiungi Prompt</button>
+          </div>
+          <textarea id="new-prompt-text" rows="2" data-i18n-placeholder="customPromptPlaceholder" placeholder="Scrivi qui le istruzioni del prompt..."></textarea>
+        </div>
+      </section>
+
+      <!-- Card 3: Web Mode CSS Selectors -->
+      <section class="card">
+        <div class="card-header">
+          <h2 data-i18n="optionsSelectorsSection">Selettori CSS Avanzati (Web Mode)</h2>
+          <button id="reset-selectors-btn" type="button" class="btn secondary small-btn" data-i18n="resetDefaultsBtn">Ripristina default</button>
+        </div>
+        <p class="description" data-i18n="optionsSelectorsDesc">Se un sito LLM cambia la sua interfaccia, puoi aggiornare qui i selettori CSS della casella di input (separati da virgola). Lascia vuoto per ripristinare i valori predefiniti.</p>
+
         <div class="form-group">
-          <label for="chatgpt-selectors">ChatGPT Selectors (separati da virgola)</label>
+          <label for="chatgpt-selectors">ChatGPT</label>
           <input type="text" id="chatgpt-selectors">
         </div>
-        
         <div class="form-group">
-          <label for="claude-selectors">Claude Selectors</label>
+          <label for="claude-selectors">Claude</label>
           <input type="text" id="claude-selectors">
         </div>
-        
         <div class="form-group">
-          <label for="gemini-selectors">Gemini Selectors</label>
+          <label for="gemini-selectors">Gemini</label>
           <input type="text" id="gemini-selectors">
         </div>
-        
         <div class="form-group">
-          <label for="perplexity-selectors">Perplexity Selectors</label>
+          <label for="perplexity-selectors">Perplexity</label>
           <input type="text" id="perplexity-selectors">
         </div>
       </section>
-      
+
+      <!-- Card 4: Extraction & Workflow -->
       <section class="card">
-        <h2>Opzioni di Estrazione (Markdown)</h2>
-        <p class="description">Scegli quali elementi mantenere quando l'estensione estrae il testo da una pagina.</p>
-        
+        <h2 data-i18n="optionsExtractionSection">Opzioni di Estrazione e Flusso</h2>
+        <p class="description" data-i18n="optionsExtractionDesc">Personalizza come viene estratto il testo dalle pagine web e gestita la coda.</p>
+
         <div class="form-group checkbox-group">
           <label class="checkbox-label">
-            <input type="checkbox" id="keep-links">
-            <span class="checkbox-custom"></span>
-            Preserva i link nel testo
+            <input type="checkbox" id="include-source-meta" class="sr-only" checked>
+            <span class="checkbox-custom" aria-hidden="true"></span>
+            <span data-i18n="optIncludeSourceMeta">Includi titolo e URL della pagina nei contenuti inviati</span>
           </label>
         </div>
         <div class="form-group checkbox-group">
           <label class="checkbox-label">
-            <input type="checkbox" id="keep-images">
-            <span class="checkbox-custom"></span>
-            Preserva le immagini
+            <input type="checkbox" id="keep-links" class="sr-only">
+            <span class="checkbox-custom" aria-hidden="true"></span>
+            <span data-i18n="optKeepLinks">Preserva i link nel testo estratto</span>
           </label>
         </div>
         <div class="form-group checkbox-group">
           <label class="checkbox-label">
-            <input type="checkbox" id="auto-scroll">
-            <span class="checkbox-custom"></span>
-            Forza auto-scroll per Lazy Loading (carica tutte le immagini prima di estrarre)
+            <input type="checkbox" id="keep-images" class="sr-only">
+            <span class="checkbox-custom" aria-hidden="true"></span>
+            <span data-i18n="optKeepImages">Preserva le immagini nel testo estratto</span>
+          </label>
+        </div>
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="auto-scroll" class="sr-only">
+            <span class="checkbox-custom" aria-hidden="true"></span>
+            <span data-i18n="optAutoScroll">Auto-scroll progressivo per contenuti lazy-loaded</span>
+          </label>
+        </div>
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="auto-clear-queue" class="sr-only">
+            <span class="checkbox-custom" aria-hidden="true"></span>
+            <span data-i18n="optAutoClearQueue">Svuota automaticamente la coda dopo l'invio</span>
           </label>
         </div>
       </section>
-      
+
       <div class="actions">
-        <span id="status-msg" class="status hidden">Salvato con successo!</span>
-        <button id="save-btn" class="btn primary">Salva Impostazioni</button>
+        <span id="status-msg" class="status hidden" role="status" aria-live="polite" data-i18n="optionsSaved">Salvato con successo!</span>
+        <button id="save-btn" type="button" class="btn primary" data-i18n="saveSettingsBtn">Salva Impostazioni</button>
       </div>
     </main>
   </div>
-  <script src="options.js"></script>
+  <script type="module" src="options.js"></script>
 </body>
 </html>

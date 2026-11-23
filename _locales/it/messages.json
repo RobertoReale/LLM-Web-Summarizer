@@ -1,94 +1,155 @@
 {
-  "extensionName": {
-    "message": "LLM Web-Summarizer",
-    "description": "Name of the extension"
-  },
-  "extensionDesc": {
-    "message": "Riassumi pagine web o testo selezionato utilizzando il tuo LLM preferito.",
-    "description": "Description of the extension"
-  },
-  "title": {
-    "message": "LLM Summarizer"
-  },
-  "textManagement": {
-    "message": "1. Gestione Testo"
-  },
-  "capturePage": {
-    "message": "Cattura Pagina Intera"
-  },
-  "captureSelection": {
-    "message": "Cattura Selezione"
-  },
-  "queueStatus": {
-    "message": "Elementi in coda: "
-  },
-  "clearQueue": {
-    "message": "Svuota Coda"
-  },
-  "viewQueue": {
-    "message": "Visualizza Coda"
-  },
-  "hideQueue": {
-    "message": "Nascondi Coda"
-  },
-  "charCount": {
-    "message": "Caratteri"
-  },
-  "tokenCount": {
-    "message": "Token"
-  },
-  "lengthWarning": {
-    "message": "Attenzione: I testi molto lunghi potrebbero essere troncati o causare instabilità nella Web Mode."
-  },
-  "configTitle": {
-    "message": "2. Configurazione"
-  },
-  "promptType": {
-    "message": "Tipo di Prompt"
-  },
-  "promptShort": {
-    "message": "Riassunto Corto"
-  },
-  "promptDetailed": {
-    "message": "Riassunto Dettagliato"
-  },
-  "promptCustom": {
-    "message": "Personalizzato..."
-  },
-  "customPromptLabel": {
-    "message": "Prompt Personalizzato"
-  },
-  "customPromptPlaceholder": {
-    "message": "Scrivi qui il tuo prompt..."
-  },
-  "targetLlm": {
-    "message": "LLM di Destinazione"
-  },
-  "submitBtn": {
-    "message": "Invia a LLM"
-  },
-  "submitBtnLoading": {
-    "message": "Apertura Web Mode..."
-  },
-  "apiOutputTitle": {
-    "message": "Risposta API"
-  },
-  "copyAll": {
-    "message": "Copia Tutto"
-  },
-  "queueEmpty": {
-    "message": "La coda è vuota. Cattura del testo prima di inviare."
-  },
-  "contextMenuAdd": {
-    "message": "Aggiungi al riassunto (LLM)"
-  },
-  "toastCapturedSelection": {
-    "message": "Catturata selezione:"
-  },
-  "toastCapturedPage": {
-    "message": "Catturata pagina:"
-  },
-  "textLabel": {
-    "message": "Testo:"
-  }
+  "extensionName": { "message": "LLM Web-Summarizer" },
+  "extensionDesc": { "message": "Riassumi pagine web o testo selezionato utilizzando il tuo LLM preferito (Web Mode o API)." },
+  "commandAddToQueue": { "message": "Aggiungi il testo selezionato alla coda" },
+  "title": { "message": "LLM Summarizer" },
+  "openSidePanel": { "message": "Apri nel pannello laterale" },
+  "openOptions": { "message": "Impostazioni" },
+  "toggleTheme": { "message": "Cambia tema" },
+  "textManagement": { "message": "1. Gestione Testo" },
+  "capturePage": { "message": "Cattura Pagina Intera" },
+  "captureSelection": { "message": "Cattura Selezione" },
+  "capturingBtn": { "message": "Estrazione..." },
+  "queueStatus": { "message": "Elementi in coda: " },
+  "clearQueue": { "message": "Svuota" },
+  "viewQueue": { "message": "Visualizza" },
+  "hideQueue": { "message": "Nascondi" },
+  "queueEditorPlaceholder": { "message": "Il testo in coda apparirà qui..." },
+  "addManualTextBtn": { "message": "+ Aggiungi testo" },
+  "addBtn": { "message": "Aggiungi" },
+  "queueKindPage": { "message": "Pagina" },
+  "queueKindSelection": { "message": "Selezione" },
+  "queueKindManual": { "message": "Nota" },
+  "editItemBtn": { "message": "Modifica" },
+  "removeItemBtn": { "message": "Rimuovi" },
+  "charCount": { "message": "Caratteri" },
+  "tokenCount": { "message": "Token" },
+  "lengthWarning": { "message": "Attenzione: il testo supera il limite consigliato per la Web Mode di questo LLM. Usa Dividi e Copia o passa ad API Mode." },
+  "configTitle": { "message": "2. Configurazione" },
+  "promptType": { "message": "Tipo di Prompt" },
+  "togglePromptEditor": { "message": "Mostra / modifica prompt" },
+  "outputLanguageLabel": { "message": "Lingua Output" },
+  "langAuto": { "message": "Auto (lingua testo)" },
+  "langIt": { "message": "Italiano" },
+  "langEn": { "message": "English" },
+  "langEs": { "message": "Español" },
+  "langFr": { "message": "Français" },
+  "langDe": { "message": "Deutsch" },
+  "langPt": { "message": "Português" },
+  "promptShort": { "message": "Riassunto Corto" },
+  "promptDetailed": { "message": "Riassunto Dettagliato" },
+  "promptKeyPoints": { "message": "Punti Chiave" },
+  "promptCustom": { "message": "Personalizzato..." },
+  "promptShortInstruction": { "message": "Fornisci un riassunto breve e chiaro del seguente testo, concentrandoti solo sui punti chiave in un elenco puntato conciso." },
+  "promptDetailedInstruction": { "message": "Genera un riassunto completo, dettagliato e ben strutturato del seguente testo. Organizza i concetti principali con titoli chiari e assicurati di non tralasciare argomenti, spiegazioni o dettagli importanti." },
+  "promptKeyPointsInstruction": { "message": "Estrai i punti chiave, i fatti principali e le conclusioni operative dal seguente testo in forma di elenco puntato chiaro e ordinato." },
+  "customPromptLabel": { "message": "Testo Prompt" },
+  "promptModifiedBadge": { "message": "Modificato" },
+  "promptPlaceholderHint": { "message": "Opzionale: usa {{text}} per scegliere dove inserire il testo catturato." },
+  "customPromptPlaceholder": { "message": "Scrivi qui il tuo prompt..." },
+  "promptNamePlaceholder": { "message": "Nome del prompt..." },
+  "confirmBtn": { "message": "OK" },
+  "cancelBtn": { "message": "Annulla" },
+  "savePromptBtn": { "message": "Salva" },
+  "updatePromptBtn": { "message": "Aggiorna" },
+  "saveAsNewBtn": { "message": "Salva nuovo" },
+  "renamePromptBtn": { "message": "Rinomina" },
+  "revertPromptBtn": { "message": "Ripristina" },
+  "deletePromptBtn": { "message": "Elimina" },
+  "deletePromptConfirm": { "message": "Conferma elimina?" },
+  "targetLlm": { "message": "LLM di Destinazione" },
+  "localLlmOption": { "message": "Local (Ollama / LM Studio)" },
+  "webModeLabel": { "message": "Web Mode" },
+  "apiModeLabel": { "message": "API Mode" },
+  "localApiOnlyHint": { "message": "I modelli locali supportano solo la modalità API." },
+  "autoSubmitLabel": { "message": "Invio automatico (Web Mode)" },
+  "activeModelPrefix": { "message": "Modello:" },
+  "configureApiBtn": { "message": "Configura" },
+  "submitBtn": { "message": "Invia a LLM" },
+  "submitBtnLoading": { "message": "Apertura Web Mode..." },
+  "apiStreamingBtn": { "message": "Generazione in corso..." },
+  "stopBtn": { "message": "Stop" },
+  "historyTitle": { "message": "Cronologia API" },
+  "apiOutputTitle": { "message": "Risposta API" },
+  "copyAll": { "message": "Copia" },
+  "downloadMdTitle": { "message": "Scarica Markdown (.md)" },
+  "downloadedMdMsg": { "message": "Scaricato:" },
+  "clearOutputBtn": { "message": "Pulisci" },
+  "outputTruncatedWarning": { "message": "Attenzione: la risposta potrebbe essere troncata (limite massimo di token in output raggiunto)." },
+  "copiedLabel": { "message": "Copiato!" },
+  "closeLabel": { "message": "Chiudi" },
+  "errorPrefix": { "message": "Errore:" },
+  "apiProcessing": { "message": "Elaborazione in corso..." },
+  "apiAbortedNotice": { "message": "[Generazione interrotta dall'utente]" },
+  "promptEmptyError": { "message": "Scrivi un prompt prima di continuare." },
+  "promptUpdatedMsg": { "message": "Prompt aggiornato!" },
+  "promptRenamedMsg": { "message": "Prompt rinominato!" },
+  "promptRevertedMsg": { "message": "Modifiche annullate." },
+  "presetRestoredMsg": { "message": "Preset predefinito ripristinato." },
+  "promptNameRequired": { "message": "Inserisci un nome per salvare il prompt." },
+  "promptNameAndTextRequired": { "message": "Inserisci sia il nome che il testo del prompt." },
+  "promptSavedMsg": { "message": "Prompt salvato!" },
+  "promptDeletedMsg": { "message": "Prompt eliminato." },
+  "statusSelectionCaptured": { "message": "Selezione aggiunta alla coda." },
+  "statusPageCaptured": { "message": "Pagina aggiunta alla coda." },
+  "errRestrictedPage": { "message": "Impossibile estrarre testo da questa pagina interna del browser." },
+  "errEmptySelection": { "message": "Nessun testo selezionato nella pagina corrente." },
+  "errEmptyPage": { "message": "Nessun testo leggibile trovato nella pagina." },
+  "errNoActiveTab": { "message": "Nessuna scheda attiva trovata." },
+  "errCaptureFailed": { "message": "Estrazione del testo non riuscita." },
+  "errClipboardWrite": { "message": "Impossibile copiare negli appunti." },
+  "errWebModeFailed": { "message": "Impossibile avviare la Web Mode." },
+  "splitCopyStart": { "message": "Testo lungo: Dividi e Copia (Parte 1)" },
+  "splitIntroPrefix": { "message": "Questo testo è molto lungo e te lo invierò in {total} parti. Non riassumere finché non ricevi l'ultima parte contrassegnata \"FINE TESTO\". Rispondi solo \"Ok, attendo\" alle parti intermedie.\n\nIstruzioni da applicare quando avrai ricevuto tutto:" },
+  "splitPartWord": { "message": "PARTE" },
+  "splitPartShort": { "message": "P" },
+  "splitEndMarker": { "message": "FINE TESTO" },
+  "splitCopiedNext": { "message": "Copiata parte" },
+  "splitNextPart": { "message": "Copia parte" },
+  "splitAllCopied": { "message": "Tutte le parti copiate! (Ricomincia)" },
+  "queueEmpty": { "message": "La coda è vuota. Cattura del testo prima di inviare." },
+  "contextMenuAdd": { "message": "Aggiungi al riassunto (LLM)" },
+  "toastCapturedSelection": { "message": "Selezione catturata:" },
+  "toastCapturedPage": { "message": "Pagina catturata:" },
+  "textLabel": { "message": "Testo:" },
+  "fallbackPasteMsg": { "message": "Incolla automatico non riuscito. Clicca sotto per copiare il prompt, poi premi Ctrl+V (o Cmd+V)." },
+  "fallbackCopiedAutoMsg": { "message": "Incolla automatico non riuscito. Il prompt è stato copiato negli appunti: premi Ctrl+V (o Cmd+V)." },
+  "fallbackCopyBtn": { "message": "Copia Prompt" },
+  "optionsPageTitle": { "message": "Opzioni - LLM Web-Summarizer" },
+  "optionsHeading": { "message": "Configurazione LLM Web-Summarizer" },
+  "optionsApiSection": { "message": "Chiavi API e Modelli (API Mode)" },
+  "resetDefaultsBtn": { "message": "Ripristina default" },
+  "optionsApiDesc": { "message": "Inserisci le chiavi API e gli ID dei modelli per la modalità API diretta. Puoi digitare qualsiasi modello supportato dal provider." },
+  "optionsPrivacyNote": { "message": "Le chiavi API restano salvate solo localmente sul tuo dispositivo e vengono inviate unicamente al provider selezionato." },
+  "toggleSecretTitle": { "message": "Mostra / nascondi chiave" },
+  "testConnBtn": { "message": "Test" },
+  "testingConnMsg": { "message": "Test connessione in corso..." },
+  "testConnOk": { "message": "Connessione riuscita" },
+  "errInvalidLocalUrl": { "message": "URL locale non valido: deve iniziare con http:// o https://." },
+  "errLocalHostPermDenied": { "message": "Permesso negato dal browser per accedere a questo host locale." },
+  "optSavedPermWarning": { "message": "Impostazioni salvate, ma il permesso per l'host locale è stato negato: le richieste verso quell'URL potrebbero fallire." },
+  "modelLabel": { "message": "Modello" },
+  "localUrlLabel": { "message": "URL Locale (Ollama / LM Studio)" },
+  "localModelLabel": { "message": "Modello Locale" },
+  "localKeyLabel": { "message": "API Key Locale / Custom (opzionale)" },
+  "optionsPromptsSection": { "message": "Gestione Prompt" },
+  "resetPresetsBtn": { "message": "Ripristina preset" },
+  "optionsPromptsDesc": { "message": "Visualizza o personalizza i prompt predefiniti e gestisci i tuoi template salvati. Puoi usare opzionalmente {{text}} per scegliere dove inserire il testo catturato." },
+  "builtinPresetsHeading": { "message": "Preset Predefiniti" },
+  "savedPromptsHeading": { "message": "Prompt Personalizzati Salvati" },
+  "noSavedPromptsMsg": { "message": "Nessun prompt personalizzato salvato." },
+  "addPromptBtn": { "message": "+ Aggiungi Prompt" },
+  "moveUpBtn": { "message": "Sposta su" },
+  "moveDownBtn": { "message": "Sposta giù" },
+  "optionsSelectorsSection": { "message": "Selettori CSS Avanzati (Web Mode)" },
+  "optionsSelectorsDesc": { "message": "Se un sito LLM cambia interfaccia, puoi aggiornare qui i selettori CSS della casella di input (separati da virgola). Lascia vuoto per ripristinare i predefiniti." },
+  "optionsExtractionSection": { "message": "Opzioni di Estrazione e Flusso" },
+  "optionsExtractionDesc": { "message": "Personalizza come viene estratto il testo dalle pagine web e gestita la coda." },
+  "optIncludeSourceMeta": { "message": "Includi titolo e URL della pagina nei contenuti inviati" },
+  "optKeepLinks": { "message": "Preserva i link nel testo estratto" },
+  "optKeepImages": { "message": "Preserva le immagini nel testo estratto" },
+  "optAutoScroll": { "message": "Auto-scroll progressivo per contenuti lazy-loaded" },
+  "optAutoClearQueue": { "message": "Svuota automaticamente la coda dopo l'invio" },
+  "optionsSaved": { "message": "Salvato con successo!" },
+  "saveSettingsBtn": { "message": "Salva Impostazioni" }
 }

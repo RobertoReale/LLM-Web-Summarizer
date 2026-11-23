@@ -1,97 +1,104 @@
 {
-  "extensionName": {
-    "message": "LLM Web-Summarizer",
-    "description": "Name of the extension"
-  },
-  "extensionDesc": {
-    "message": "Fassen Sie Webseiten oder ausgewählten Text mit Ihrem Lieblings-LLM zusammen.",
-    "description": "Description of the extension"
-  },
-  "title": {
-    "message": "LLM Summarizer"
-  },
-  "textManagement": {
-    "message": "1. Textverwaltung"
-  },
-  "capturePage": {
-    "message": "Ganze Seite erfassen"
-  },
-  "captureSelection": {
-    "message": "Auswahl erfassen"
-  },
-  "queueStatus": {
-    "message": "Elemente in der Warteschlange: "
-  },
-  "clearQueue": {
-    "message": "Warteschlange leeren"
-  },
-  "viewQueue": {
-    "message": "Warteschlange anzeigen"
-  },
-  "hideQueue": {
-    "message": "Warteschlange ausblenden"
-  },
-  "charCount": {
-    "message": "Zeichen"
-  },
-  "tokenCount": {
-    "message": "Tokens"
-  },
-  "lengthWarning": {
-    "message": "Warnung: Sehr lange Texte können abgeschnitten werden oder Instabilität verursachen."
-  },
-  "configTitle": {
-    "message": "2. Konfiguration"
-  },
-  "promptType": {
-    "message": "Prompt-Typ"
-  },
-  "promptShort": {
-    "message": "Kurze Zusammenfassung"
-  },
-  "promptDetailed": {
-    "message": "Detaillierte Zusammenfassung"
-  },
-  "promptChild": {
-    "message": "Erkläre es wie einem Kind"
-  },
-  "promptCustom": {
-    "message": "Benutzerdefiniert..."
-  },
-  "customPromptLabel": {
-    "message": "Benutzerdefinierter Prompt"
-  },
-  "customPromptPlaceholder": {
-    "message": "Schreiben Sie hier Ihren Prompt..."
-  },
-  "targetLlm": {
-    "message": "Ziel-LLM"
-  },
-  "submitBtn": {
-    "message": "An LLM senden"
-  },
-  "submitBtnLoading": {
-    "message": "Web-Modus wird geöffnet..."
-  },
-  "apiOutputTitle": {
-    "message": "API-Ausgabe"
-  },
-  "copyAll": {
-    "message": "Alles kopieren"
-  },
-  "queueEmpty": {
-    "message": "Die Warteschlange ist leer. Erfassen Sie zuerst Text."
-  },
-  "contextMenuAdd": {
-    "message": "Zur Zusammenfassung hinzufügen (LLM)"
-  },
-  "toastCapturedSelection": {
-    "message": "Auswahl erfasst:"
-  },
-  "toastCapturedPage": {
-    "message": "Seite erfasst:"
-  },
-  "textLabel": {
-    "message": "Text:"
-  }
+  "extensionName": { "message": "LLM Web-Summarizer" },
+  "extensionDesc": { "message": "Fassen Sie Webseiten oder ausgewählten Text mit Ihrem Lieblings-LLM zusammen (Web- oder API-Modus)." },
+  "commandAddToQueue": { "message": "Ausgewählten Text zur Warteschlange hinzufügen" },
+  "title": { "message": "LLM Summarizer" },
+  "openOptions": { "message": "Einstellungen" },
+  "toggleTheme": { "message": "Design wechseln" },
+  "textManagement": { "message": "1. Textverwaltung" },
+  "capturePage": { "message": "Ganze Seite erfassen" },
+  "captureSelection": { "message": "Auswahl erfassen" },
+  "queueStatus": { "message": "Elemente in der Warteschlange: " },
+  "clearQueue": { "message": "Leeren" },
+  "viewQueue": { "message": "Anzeigen" },
+  "hideQueue": { "message": "Ausblenden" },
+  "queueEditorPlaceholder": { "message": "Text in der Warteschlange erscheint hier..." },
+  "charCount": { "message": "Zeichen" },
+  "tokenCount": { "message": "Tokens" },
+  "lengthWarning": { "message": "Warnung: Der Text überschreitet das empfohlene Web-Modus-Limit für dieses LLM. Verwenden Sie Teilen & Kopieren oder den API-Modus." },
+  "configTitle": { "message": "2. Konfiguration" },
+  "promptType": { "message": "Prompt-Typ" },
+  "promptShort": { "message": "Kurze Zusammenfassung" },
+  "promptDetailed": { "message": "Detaillierte Zusammenfassung" },
+  "promptKeyPoints": { "message": "Wichtigste Punkte" },
+  "promptCustom": { "message": "Benutzerdefiniert..." },
+  "promptShortInstruction": { "message": "Erstelle eine kurze, klare Zusammenfassung des folgenden Textes und konzentriere dich nur auf die wichtigsten Punkte als prägnante Aufzählung." },
+  "promptDetailedInstruction": { "message": "Erstelle eine vollständige, detaillierte und gut strukturierte Zusammenfassung des folgenden Textes. Gliedere die Hauptkonzepte mit klaren Überschriften und lasse keine wichtigen Argumente, Erklärungen oder Details aus." },
+  "promptKeyPointsInstruction": { "message": "Extrahiere die wichtigsten Erkenntnisse, Kernfakten und praktischen Schlussfolgerungen aus dem folgenden Text als übersichtliche Aufzählung." },
+  "customPromptLabel": { "message": "Benutzerdefinierter Prompt" },
+  "customPromptPlaceholder": { "message": "Schreiben Sie hier Ihren Prompt..." },
+  "promptNamePlaceholder": { "message": "Name des Prompts..." },
+  "confirmBtn": { "message": "OK" },
+  "cancelBtn": { "message": "Abbrechen" },
+  "savePromptBtn": { "message": "Speichern" },
+  "deletePromptBtn": { "message": "Löschen" },
+  "deletePromptConfirm": { "message": "Löschen bestätigen?" },
+  "targetLlm": { "message": "Ziel-LLM" },
+  "localLlmOption": { "message": "Lokal (Ollama / LM Studio)" },
+  "webModeLabel": { "message": "Web-Modus" },
+  "apiModeLabel": { "message": "API-Modus" },
+  "localApiOnlyHint": { "message": "Lokale Modelle unterstützen nur den API-Modus." },
+  "autoSubmitLabel": { "message": "Automatisch senden (Web-Modus)" },
+  "activeModelPrefix": { "message": "Modell:" },
+  "configureApiBtn": { "message": "Konfigurieren" },
+  "submitBtn": { "message": "An LLM senden" },
+  "submitBtnLoading": { "message": "Web-Modus wird geöffnet..." },
+  "apiStreamingBtn": { "message": "Wird generiert..." },
+  "stopBtn": { "message": "Stopp" },
+  "apiOutputTitle": { "message": "API-Ausgabe" },
+  "copyAll": { "message": "Kopieren" },
+  "clearOutputBtn": { "message": "Leeren" },
+  "copiedLabel": { "message": "Kopiert!" },
+  "closeLabel": { "message": "Schließen" },
+  "errorPrefix": { "message": "Fehler:" },
+  "apiProcessing": { "message": "Wird verarbeitet..." },
+  "apiAbortedNotice": { "message": "[Generierung vom Benutzer gestoppt]" },
+  "promptEmptyError": { "message": "Bitte geben Sie zuerst einen Prompt ein." },
+  "promptUpdatedMsg": { "message": "Prompt aktualisiert!" },
+  "promptNameRequired": { "message": "Bitte geben Sie einen Namen für den Prompt ein." },
+  "promptSavedMsg": { "message": "Prompt gespeichert!" },
+  "promptDeletedMsg": { "message": "Prompt gelöscht." },
+  "statusSelectionCaptured": { "message": "Auswahl zur Warteschlange hinzugefügt." },
+  "statusPageCaptured": { "message": "Seite zur Warteschlange hinzugefügt." },
+  "errRestrictedPage": { "message": "Text kann von dieser internen Browser-Seite nicht extrahiert werden." },
+  "errEmptySelection": { "message": "Auf der aktuellen Seite ist kein Text ausgewählt." },
+  "errEmptyPage": { "message": "Kein lesbarer Text auf dieser Seite gefunden." },
+  "errNoActiveTab": { "message": "Kein aktiver Tab gefunden." },
+  "errCaptureFailed": { "message": "Textextraktion fehlgeschlagen." },
+  "errClipboardWrite": { "message": "Kopieren in die Zwischenablage fehlgeschlagen." },
+  "errWebModeFailed": { "message": "Web-Modus konnte nicht gestartet werden." },
+  "splitCopyStart": { "message": "Langer Text: Teilen & Kopieren (Teil 1)" },
+  "splitIntroPrefix": { "message": "Dieser Text ist sehr lang, ich sende ihn in {total} Teilen. Fasse noch nicht zusammen, bis ich den letzten Teil mit \"TEXTENDE\" sende. Antworte auf Zwischenteile nur mit \"Ok, ich warte\".\n\nAnweisungen, sobald alle Teile eingetroffen sind:" },
+  "splitPartWord": { "message": "TEIL" },
+  "splitEndMarker": { "message": "TEXTENDE" },
+  "splitCopiedNext": { "message": "Kopiert Teil" },
+  "splitNextPart": { "message": "Kopiere Teil" },
+  "splitAllCopied": { "message": "Alle Teile kopiert! (Neu starten)" },
+  "queueEmpty": { "message": "Die Warteschlange ist leer. Erfassen Sie zuerst Text." },
+  "contextMenuAdd": { "message": "Zur Zusammenfassung hinzufügen (LLM)" },
+  "toastCapturedSelection": { "message": "Auswahl erfasst:" },
+  "toastCapturedPage": { "message": "Seite erfasst:" },
+  "textLabel": { "message": "Text:" },
+  "fallbackPasteMsg": { "message": "Automatisches Einfügen fehlgeschlagen. Klicken Sie unten zum Kopieren und drücken Sie Strg+V (oder Cmd+V)." },
+  "fallbackCopiedAutoMsg": { "message": "Automatisches Einfügen fehlgeschlagen. Prompt wurde in die Zwischenablage kopiert – drücken Sie Strg+V (oder Cmd+V)." },
+  "fallbackCopyBtn": { "message": "Prompt kopieren" },
+  "optionsPageTitle": { "message": "Optionen - LLM Web-Summarizer" },
+  "optionsHeading": { "message": "LLM Web-Summarizer Einstellungen" },
+  "optionsApiSection": { "message": "API-Schlüssel & Modelle (API-Modus)" },
+  "resetDefaultsBtn": { "message": "Standard wiederherstellen" },
+  "optionsApiDesc": { "message": "Konfigurieren Sie Ihre API-Schlüssel und Modell-IDs für den direkten API-Modus. Sie können jede gültige Modell-ID eingeben." },
+  "modelLabel": { "message": "Modell" },
+  "localUrlLabel": { "message": "Lokale URL (Ollama / LM Studio)" },
+  "localModelLabel": { "message": "Lokales Modell" },
+  "localKeyLabel": { "message": "Lokaler / Benutzerdefinierter API-Schlüssel (optional)" },
+  "optionsSelectorsSection": { "message": "Erweiterte CSS-Selektoren (Web-Modus)" },
+  "optionsSelectorsDesc": { "message": "Falls eine LLM-Website ihre Oberfläche ändert, können Sie hier die kommagetrennten CSS-Selektoren anpassen. Leer lassen für Standardwerte." },
+  "optionsExtractionSection": { "message": "Extraktions- & Workflow-Optionen" },
+  "optionsExtractionDesc": { "message": "Passen Sie an, wie Text aus Webseiten extrahiert und die Warteschlange verwaltet wird." },
+  "optKeepLinks": { "message": "Links im extrahierten Text beibehalten" },
+  "optKeepImages": { "message": "Bilder im extrahierten Text beibehalten" },
+  "optAutoScroll": { "message": "Schrittweises Auto-Scroll für Lazy-Loading-Inhalte" },
+  "optAutoClearQueue": { "message": "Warteschlange nach dem Senden automatisch leeren" },
+  "optionsSaved": { "message": "Erfolgreich gespeichert!" },
+  "saveSettingsBtn": { "message": "Einstellungen speichern" }
 }

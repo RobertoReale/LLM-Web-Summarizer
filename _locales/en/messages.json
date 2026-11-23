@@ -1,94 +1,104 @@
 {
-  "extensionName": {
-    "message": "LLM Web-Summarizer",
-    "description": "Name of the extension"
-  },
-  "extensionDesc": {
-    "message": "Summarize web pages or selected text using your favorite LLM.",
-    "description": "Description of the extension"
-  },
-  "title": {
-    "message": "LLM Summarizer"
-  },
-  "textManagement": {
-    "message": "1. Text Management"
-  },
-  "capturePage": {
-    "message": "Capture Full Page"
-  },
-  "captureSelection": {
-    "message": "Capture Selection"
-  },
-  "queueStatus": {
-    "message": "Items in queue: "
-  },
-  "clearQueue": {
-    "message": "Clear Queue"
-  },
-  "viewQueue": {
-    "message": "View Queue"
-  },
-  "hideQueue": {
-    "message": "Hide Queue"
-  },
-  "charCount": {
-    "message": "Characters"
-  },
-  "tokenCount": {
-    "message": "Tokens"
-  },
-  "lengthWarning": {
-    "message": "Warning: Very long texts might be truncated or cause instability in Web Mode."
-  },
-  "configTitle": {
-    "message": "2. Configuration"
-  },
-  "promptType": {
-    "message": "Prompt Type"
-  },
-  "promptShort": {
-    "message": "Short Summary"
-  },
-  "promptDetailed": {
-    "message": "Detailed Summary"
-  },
-  "promptCustom": {
-    "message": "Custom..."
-  },
-  "customPromptLabel": {
-    "message": "Custom Prompt"
-  },
-  "customPromptPlaceholder": {
-    "message": "Write your prompt here..."
-  },
-  "targetLlm": {
-    "message": "Target LLM"
-  },
-  "submitBtn": {
-    "message": "Send to LLM"
-  },
-  "submitBtnLoading": {
-    "message": "Opening Web Mode..."
-  },
-  "apiOutputTitle": {
-    "message": "API Output"
-  },
-  "copyAll": {
-    "message": "Copy All"
-  },
-  "queueEmpty": {
-    "message": "Queue is empty. Capture text before sending."
-  },
-  "contextMenuAdd": {
-    "message": "Add to Summary (LLM)"
-  },
-  "toastCapturedSelection": {
-    "message": "Captured selection:"
-  },
-  "toastCapturedPage": {
-    "message": "Captured page:"
-  },
-  "textLabel": {
-    "message": "Text:"
-  }
+  "extensionName": { "message": "LLM Web-Summarizer" },
+  "extensionDesc": { "message": "Summarize web pages or selected text using your favorite LLM (Web Mode or API)." },
+  "commandAddToQueue": { "message": "Add selected text to queue" },
+  "title": { "message": "LLM Summarizer" },
+  "openOptions": { "message": "Settings" },
+  "toggleTheme": { "message": "Toggle theme" },
+  "textManagement": { "message": "1. Text Management" },
+  "capturePage": { "message": "Capture Full Page" },
+  "captureSelection": { "message": "Capture Selection" },
+  "queueStatus": { "message": "Items in queue: " },
+  "clearQueue": { "message": "Clear" },
+  "viewQueue": { "message": "View" },
+  "hideQueue": { "message": "Hide" },
+  "queueEditorPlaceholder": { "message": "Queued text will appear here..." },
+  "charCount": { "message": "Characters" },
+  "tokenCount": { "message": "Tokens" },
+  "lengthWarning": { "message": "Warning: text exceeds the recommended Web Mode limit for this LLM. Use Split & Copy or switch to API Mode." },
+  "configTitle": { "message": "2. Configuration" },
+  "promptType": { "message": "Prompt Type" },
+  "promptShort": { "message": "Short Summary" },
+  "promptDetailed": { "message": "Detailed Summary" },
+  "promptKeyPoints": { "message": "Key Takeaways" },
+  "promptCustom": { "message": "Custom..." },
+  "promptShortInstruction": { "message": "Provide a concise, clear summary of the following text, focusing only on the key points in a brief bulleted list." },
+  "promptDetailedInstruction": { "message": "Generate a complete, detailed, and well-structured summary of the following text. Organize the main concepts with clear headings and make sure not to omit important arguments, explanations, or details." },
+  "promptKeyPointsInstruction": { "message": "Extract the key takeaways, core facts, and actionable conclusions from the following text as a clear, ordered bullet list." },
+  "customPromptLabel": { "message": "Custom Prompt" },
+  "customPromptPlaceholder": { "message": "Write your prompt here..." },
+  "promptNamePlaceholder": { "message": "Prompt name..." },
+  "confirmBtn": { "message": "OK" },
+  "cancelBtn": { "message": "Cancel" },
+  "savePromptBtn": { "message": "Save" },
+  "deletePromptBtn": { "message": "Delete" },
+  "deletePromptConfirm": { "message": "Confirm delete?" },
+  "targetLlm": { "message": "Target LLM" },
+  "localLlmOption": { "message": "Local (Ollama / LM Studio)" },
+  "webModeLabel": { "message": "Web Mode" },
+  "apiModeLabel": { "message": "API Mode" },
+  "localApiOnlyHint": { "message": "Local models only support API Mode." },
+  "autoSubmitLabel": { "message": "Auto-submit (Web Mode)" },
+  "activeModelPrefix": { "message": "Model:" },
+  "configureApiBtn": { "message": "Configure" },
+  "submitBtn": { "message": "Send to LLM" },
+  "submitBtnLoading": { "message": "Opening Web Mode..." },
+  "apiStreamingBtn": { "message": "Generating..." },
+  "stopBtn": { "message": "Stop" },
+  "apiOutputTitle": { "message": "API Output" },
+  "copyAll": { "message": "Copy" },
+  "clearOutputBtn": { "message": "Clear" },
+  "copiedLabel": { "message": "Copied!" },
+  "closeLabel": { "message": "Close" },
+  "errorPrefix": { "message": "Error:" },
+  "apiProcessing": { "message": "Processing..." },
+  "apiAbortedNotice": { "message": "[Generation stopped by user]" },
+  "promptEmptyError": { "message": "Enter a prompt before continuing." },
+  "promptUpdatedMsg": { "message": "Prompt updated!" },
+  "promptNameRequired": { "message": "Enter a name to save the prompt." },
+  "promptSavedMsg": { "message": "Prompt saved!" },
+  "promptDeletedMsg": { "message": "Prompt deleted." },
+  "statusSelectionCaptured": { "message": "Selection added to queue." },
+  "statusPageCaptured": { "message": "Page added to queue." },
+  "errRestrictedPage": { "message": "Cannot extract text from this internal browser page." },
+  "errEmptySelection": { "message": "No text is selected on the current page." },
+  "errEmptyPage": { "message": "No readable text found on this page." },
+  "errNoActiveTab": { "message": "No active tab found." },
+  "errCaptureFailed": { "message": "Failed to capture text from the page." },
+  "errClipboardWrite": { "message": "Unable to copy to clipboard." },
+  "errWebModeFailed": { "message": "Failed to launch Web Mode." },
+  "splitCopyStart": { "message": "Long text: Split & Copy (Part 1)" },
+  "splitIntroPrefix": { "message": "This text is very long, so I will send it in {total} parts. Do not summarize until I send the final part marked \"END OF TEXT\". Reply only \"OK, waiting\" to intermediate parts.\n\nInstructions to apply once you receive all parts:" },
+  "splitPartWord": { "message": "PART" },
+  "splitEndMarker": { "message": "END OF TEXT" },
+  "splitCopiedNext": { "message": "Copied part" },
+  "splitNextPart": { "message": "Copy part" },
+  "splitAllCopied": { "message": "All parts copied! (Restart)" },
+  "queueEmpty": { "message": "Queue is empty. Capture text before sending." },
+  "contextMenuAdd": { "message": "Add to Summary (LLM)" },
+  "toastCapturedSelection": { "message": "Captured selection:" },
+  "toastCapturedPage": { "message": "Captured page:" },
+  "textLabel": { "message": "Text:" },
+  "fallbackPasteMsg": { "message": "Automatic paste failed. Click below to copy the prompt, then press Ctrl+V (or Cmd+V)." },
+  "fallbackCopiedAutoMsg": { "message": "Automatic paste failed. Prompt copied to clipboard — press Ctrl+V (or Cmd+V)." },
+  "fallbackCopyBtn": { "message": "Copy Prompt" },
+  "optionsPageTitle": { "message": "Options - LLM Web-Summarizer" },
+  "optionsHeading": { "message": "LLM Web-Summarizer Settings" },
+  "optionsApiSection": { "message": "API Keys & Models (API Mode)" },
+  "resetDefaultsBtn": { "message": "Reset defaults" },
+  "optionsApiDesc": { "message": "Configure your API keys and model IDs for direct API Mode. You can type any valid model ID supported by each provider." },
+  "modelLabel": { "message": "Model" },
+  "localUrlLabel": { "message": "Local URL (Ollama / LM Studio)" },
+  "localModelLabel": { "message": "Local Model" },
+  "localKeyLabel": { "message": "Local / Custom API Key (optional)" },
+  "optionsSelectorsSection": { "message": "Advanced CSS Selectors (Web Mode)" },
+  "optionsSelectorsDesc": { "message": "If an LLM site updates its interface, you can customize the comma-separated composer CSS selectors here. Leave blank to restore defaults." },
+  "optionsExtractionSection": { "message": "Extraction & Workflow Options" },
+  "optionsExtractionDesc": { "message": "Customize how text is extracted from web pages and how the queue behaves." },
+  "optKeepLinks": { "message": "Preserve links in extracted text" },
+  "optKeepImages": { "message": "Preserve images in extracted text" },
+  "optAutoScroll": { "message": "Progressive auto-scroll for lazy-loaded content" },
+  "optAutoClearQueue": { "message": "Automatically clear queue after sending" },
+  "optionsSaved": { "message": "Saved successfully!" },
+  "saveSettingsBtn": { "message": "Save Settings" }
 }
